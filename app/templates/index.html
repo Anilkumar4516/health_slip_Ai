@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HealthSlip AI - AI-Assisted Medical Receipt & Patient Verification System</title>
+  <meta name="description" content="AI-Powered medical receipt generation, cryptographic verification, and OTP-based secure patient access system.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563EB'><path d='M4.5 10.5C3.67 10.5 3 11.17 3 12s.67 1.5 1.5 1.5h15c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5h-15zM10.5 4.5C10.5 3.67 11.17 3 12 3s1.5.67 1.5 1.5v15c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5v-15z'/></svg>">
+</head>
+<body>
+
+  <!-- Top App Navigation Bar -->
+  <header class="app-header">
+    <div class="brand-wrapper">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+          <path d="M12 5v6"/>
+          <path d="M9 8h6"/>
+        </svg>
+      </div>
+      <div>
+        <span class="brand-title">HealthSlip <span style="color: var(--primary);">AI</span></span>
+        <span class="brand-badge">Rx Verified</span>
+      </div>
+    </div>
+
+    <!-- Navigation Views Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab-btn active" id="tab-patient-btn" onclick="switchView('patient-view')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+        Patient App
+      </button>
+      <button class="nav-tab-btn" id="tab-doctor-btn" onclick="switchView('doctor-view')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 2a2 2 0 0 0-2 2v2H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2V4a2 2 0 0 0-2-2h-2z"/><path d="M12 11v6"/><path d="M9 14h6"/></svg>
+        Doctor AI Slip Builder
+      </button>
+      <button class="nav-tab-btn" id="tab-otp-btn" onclick="openOtpModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        OTP Verification
+      </button>
+      <button class="nav-tab-btn" id="tab-verify-btn" onclick="switchView('verify-view')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+        QR Verifier
+      </button>
+      <button class="nav-tab-btn" id="tab-analytics-btn" onclick="switchView('analytics-view')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        Analytics & Audits
+      </button>
+    </nav>
+
+    <!-- Header Actions, DB Badge & Real-Time Auth -->
+    <div class="header-actions">
+      <div class="db-badge" id="db-status-badge" title="Active Database Connection">
+        <span class="db-dot" id="db-dot"></span>
+        <span id="db-name-text">Checking DB...</span>
+      </div>
+      <button class="btn-ai-generate" style="padding: 0.4rem 0.85rem; font-size: 0.8rem;" onclick="switchView('doctor-view')">
+        + New Slip
+      </button>
+      <!-- Real-Time User Authentication State -->
+      <div id="header-auth-container">
+        <!-- Rendered dynamically by auth.js -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Viewport -->
+  <main class="main-viewport">
+
+    <!-- ==============================================================
+         VIEW 1: PATIENT MOBILE APP (FAITHFUL TO USER'S REFERENCE IMAGE)
+         ============================================================== -->
+    <section id="patient-view" class="view-panel active">
+      <div class="workspace-grid">
+
+        <!-- Left Column: The Mobile Device Simulation -->
+        <div class="phone-mockup-wrapper">
+          <div class="phone-device">
+            <!-- Status Bar -->
+            <div class="phone-status-bar">
+              <span id="phone-clock">9:41</span>
+              <div style="display: flex; gap: 4px; align-items: center;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 19.4a1 1 0 0 0 1.41 1.41l1.79-1.79A8.96 8.96 0 0 0 12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="7" width="18" height="11" rx="2" ry="2"/><path d="M22 11v3"/></svg>
+              </div>
+            </div>
+
+            <!-- Scrollable Content Screen -->
+            <div class="phone-content">
+              
+              <!-- User Greeting Header -->
+              <div class="phone-user-header">
+                <div class="phone-user-info">
+                  <div class="phone-avatar" id="patient-avatar-letter">M</div>
+                  <div>
+                    <div class="phone-greeting-text">Good day,</div>
+                    <div class="phone-user-name" id="patient-display-name">Minh</div>
+                  </div>
+                </div>
+                <button class="phone-icon-btn" onclick="openOtpModal()" title="OTP Verification Status">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                  <span class="badge-dot" id="auth-status-dot"></span>
+                </button>
+              </div>
+
+              <!-- Search Bar -->
+              <div class="phone-search-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="phone-search-input" placeholder="Search" oninput="filterReminders()">
+              </div>
+
+              <!-- Hero Context Card (Vaccine/Clinical Research Context with Scan CTA) -->
+              <div class="phone-hero-card">
+                <div class="hero-art-layer"></div>
+                <h4>Medical Care & Prescriptions</h4>
+                <p>Vaccines to treat cancer possible... Keep track of your daily dosages & certified slips.</p>
+                <button class="btn-scan-action" onclick="openScannerModal()">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+                  SCAN NEW INFO
+                </button>
+              </div>
+
+              <!-- Horizontal Calendar Ribbon (August 2022 / Current Date) -->
+              <div class="calendar-ribbon-wrapper">
+                <div class="calendar-month-label" id="calendar-header-title">Current Schedule</div>
+                <div class="calendar-days-row" id="calendar-days-container">
+                  <!-- Populated via JavaScript: Sun 21, Mon 22, Tue 23... -->
+                </div>
+              </div>
+
+              <!-- Medication Reminder Section (Faithful to Screenshot!) -->
+              <div class="section-headline">
+                <span>Medication reminder</span>
+                <span class="adherence-indicator" id="adherence-badge">100% On Track</span>
+              </div>
+
+              <!-- Time Group: Morning (12:00 am) -->
+              <div class="timeline-slot-group">
+                <div class="slot-label">Morning</div>
+                <div id="slot-morning-items">
+                  <!-- Cards loaded here -->
+                </div>
+              </div>
+
+              <!-- Time Group: After lunch / Afternoon -->
+              <div class="timeline-slot-group">
+                <div class="slot-label">After lunch</div>
+                <div id="slot-afternoon-items">
+                  <!-- Cards loaded here -->
+                </div>
+              </div>
+
+              <!-- Time Group: Evening / Night -->
+              <div class="timeline-slot-group">
+                <div class="slot-label">Afternoon & Evening</div>
+                <div id="slot-evening-items">
+                  <!-- Cards loaded here -->
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Floating Bottom Navigation Bar -->
+            <nav class="phone-bottom-nav">
+              <button class="phone-nav-item active" onclick="switchView('patient-view')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Home</span>
+              </button>
+              <button class="phone-nav-item" onclick="openPatientSlipsDrawer()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span>Info / Slips</span>
+              </button>
+              <button class="phone-nav-scan-badge" onclick="openScannerModal()" title="Scan Receipt QR">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+              </button>
+              <button class="phone-nav-item" onclick="refreshReminders()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Reminder</span>
+              </button>
+              <button class="phone-nav-item" onclick="switchView('doctor-view')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span>Settings</span>
+              </button>
+            </nav>
+
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Side Panel with Quick Actions -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+          
+          <!-- Verified Health Slip Card Preview -->
+          <div class="doctor-workspace-card" style="padding: 1.5rem;">
+            <div class="workspace-title-bar">
+              <div>
+                <h2>Active Medical Slip & Verification</h2>
+                <div class="workspace-subtitle">Digitally signed & verified with HealthSlip AI HMAC-SHA256</div>
+              </div>
+              <span class="receipt-stamp-badge" id="preview-stamp-status">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                Verified Active
+              </span>
+            </div>
+
+            <!-- Receipt Quick Details -->
+            <div id="active-slip-preview-container">
+              <!-- Loaded dynamically -->
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+              <button class="btn-ai-generate" style="flex: 1;" onclick="downloadActivePdf()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Official PDF Receipt
+              </button>
+              <button class="btn-scan-action" style="background: white; color: var(--navy); border: 1px solid var(--border);" onclick="openOtpModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                OTP Verification
+              </button>
+            </div>
+          </div>
+
+          <!-- Feature Highlights Card -->
+          <div class="doctor-workspace-card" style="padding: 1.25rem; background: #ffffff;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--navy);">HealthSlip AI Architecture</h3>
+            <ul style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; padding-left: 1.25rem;">
+              <li><b>Python FastAPI Backend:</b> High performance async REST architecture with Pydantic validation.</li>
+              <li><b>MySQL + SQLAlchemy ORM:</b> Relational schema with automatic SQLite fallback for zero-friction demo launch.</li>
+              <li><b>OTP Verification:</b> Cryptographic salt-hashed OTP storage, rate limiting, and brute-force lockout.</li>
+              <li><b>AI Clinical Extractor:</b> Transforms unstructured doctor notes into structured medical receipts and dosage schedules.</li>
+              <li><b>Cryptographic HMAC Seals:</b> Every slip is tamper-sealed with HMAC-SHA256 and verified via QR code.</li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================================
+         VIEW 2: DOCTOR AI RECEIPT GENERATOR WORKSPACE
+         ============================================================== -->
+    <section id="doctor-view" class="view-panel">
+      <div class="doctor-workspace-card">
+        
+        <div class="workspace-title-bar">
+          <div>
+            <h2>Doctor AI Receipt & Prescription Slip Builder</h2>
+            <div class="workspace-subtitle">Enter clinical notes or select a template to automatically generate structured receipts and patient reminders.</div>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="sample-prompt-chip" onclick="fillSamplePrompt('migraine')">Sample: Migraine & Rhinitis</button>
+            <button class="sample-prompt-chip" onclick="fillSamplePrompt('bronchitis')">Sample: Bronchitis & Lab</button>
+            <button class="sample-prompt-chip" onclick="fillSamplePrompt('hypertension')">Sample: Hypertension & Statin</button>
+          </div>
+        </div>
+
+        <!-- AI Clinical Notes Input Section -->
+        <div class="ai-note-box">
+          <div class="ai-note-header">
+            <span class="ai-sparkle-tag">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+              AI Clinical Notes & Prescription Parser
+            </span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Parses medicines, dosage, tests, prices & warnings</span>
+          </div>
+          
+          <textarea id="ai-clinical-notes-input" class="ai-textarea" placeholder="e.g. Patient Minh Nguyen, 29/M, presents with severe tension migraine. Prescribe Ibuprofen 400mg 1 pill at 12:00 am and after lunch for 5 days. Add Ibuprofen metisylat 1 pill after lunch. Advised CBC blood test and complete rest. Consultation fee $50."></textarea>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <button class="btn-ai-generate" id="btn-run-ai" onclick="runAIExtraction()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+              AI Parse & Populate Receipt
+            </button>
+            <span id="ai-status-msg" style="font-size: 0.8rem; font-weight: 600; color: var(--primary);"></span>
+          </div>
+        </div>
+
+        <!-- AI Clinical Contraindication Warnings Banner -->
+        <div id="ai-warnings-banner" class="ai-alert-box" style="display: none;">
+          <div class="ai-alert-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Clinical Safety & Interaction Alerts
+          </div>
+          <ul id="ai-warnings-list" class="ai-alert-list"></ul>
+        </div>
+
+        <!-- Form: Patient & Doctor Info -->
+        <div class="form-grid-3">
+          <div class="input-group">
+            <label class="input-label">Patient Full Name</label>
+            <input type="text" id="doc-patient-name" class="form-input" value="Minh">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Age / Gender</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="number" id="doc-patient-age" class="form-input" value="28" style="width: 70px;">
+              <select id="doc-patient-gender" class="form-input" style="flex: 1;">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Patient Phone (for OTP)</label>
+            <input type="text" id="doc-patient-phone" class="form-input" value="+1 555-019-2834">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="input-group">
+            <label class="input-label">Diagnosis</label>
+            <input type="text" id="doc-diagnosis" class="form-input" value="Acute Tension Migraine & Mild Rhinovirus">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Symptoms</label>
+            <input type="text" id="doc-symptoms" class="form-input" value="Severe tension headache, nasal congestion, seasonal fatigue">
+          </div>
+        </div>
+
+        <!-- Itemized Billing Table -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <label class="input-label" style="font-size: 0.95rem;">Itemized Medical Billing & Services</label>
+            <button class="btn-add-item" onclick="addNewItemRow()">+ Add Line Item</button>
+          </div>
+
+          <div class="items-table-wrapper">
+            <table class="items-table" id="receipt-items-table">
+              <thead>
+                <tr>
+                  <th style="width: 40%;">Description / Service</th>
+                  <th style="width: 20%;">Type</th>
+                  <th style="width: 12%;">Unit ($)</th>
+                  <th style="width: 10%;">Qty</th>
+                  <th style="width: 12%;">Total ($)</th>
+                  <th style="width: 6%;"></th>
+                </tr>
+              </thead>
+              <tbody id="receipt-items-tbody">
+                <!-- Dynamically Populated Rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Medication Schedule & Dosage Reminders (To populate Patient's App!) -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <label class="input-label" style="font-size: 0.95rem;">Patient Medication Schedule & Daily Reminders</label>
+            <button class="btn-add-item" onclick="addNewReminderRow()">+ Add Reminder Schedule</button>
+          </div>
+
+          <div class="items-table-wrapper">
+            <table class="items-table" id="reminders-table">
+              <thead>
+                <tr>
+                  <th style="width: 30%;">Medicine Name</th>
+                  <th style="width: 18%;">Dosage</th>
+                  <th style="width: 20%;">Timing Slot</th>
+                  <th style="width: 18%;">Schedule Time</th>
+                  <th style="width: 10%;">Days</th>
+                  <th style="width: 4%;"></th>
+                </tr>
+              </thead>
+              <tbody id="reminders-tbody">
+                <!-- Dynamically Populated Reminder Rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Financial Totals & Issue Button -->
+        <div class="financials-bar">
+          <div class="payment-options-col">
+            <div class="input-group">
+              <label class="input-label">Payment Method</label>
+              <select id="doc-payment-method" class="form-input" style="width: 200px;">
+                <option value="Apple Pay / NFC">Apple Pay / NFC</option>
+                <option value="Credit / Debit Card">Credit / Debit Card</option>
+                <option value="UPI / QR">UPI / QR</option>
+                <option value="Cash">Cash</option>
+                <option value="Insurance Claim">Insurance Direct Claim</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Payment Status</label>
+              <select id="doc-payment-status" class="form-input" style="width: 200px;">
+                <option value="PAID">PAID (Settled)</option>
+                <option value="PENDING">PENDING</option>
+                <option value="INSURANCE_CLAIM">INSURANCE CLAIM</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="totals-breakdown-col">
+            <div class="total-row">
+              <span>Subtotal:</span>
+              <span id="calc-subtotal">$0.00</span>
+            </div>
+            <div class="total-row">
+              <span>Tax (GST/VAT 5%):</span>
+              <span id="calc-tax">$0.00</span>
+            </div>
+            <div class="total-row">
+              <span>Discount / Co-Pay:</span>
+              <span id="calc-discount">-$0.00</span>
+            </div>
+            <div class="total-row grand">
+              <span>Grand Total:</span>
+              <span id="calc-grand-total" style="color: var(--primary);">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Final Action Button -->
+        <button class="btn-generate-slip" onclick="submitCreateHealthSlip()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><polyline points="9 12 11 14 15 10"/></svg>
+          Issue Verified Health Slip & Generate Cryptographic QR Seal
+        </button>
+
+      </div>
+    </section>
+
+    <!-- ==============================================================
+         VIEW 3: PUBLIC QR CODE VERIFIER
+         ============================================================== -->
+    <section id="verify-view" class="view-panel">
+      <div class="doctor-workspace-card" style="max-width: 650px; margin: 0 auto; text-align: center;">
+        
+        <div class="modal-icon-badge" style="width: 64px; height: 64px;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><polyline points="9 12 11 14 15 10"/></svg>
+        </div>
+        
+        <h2>Official Medical Receipt Verification Portal</h2>
+        <p style="font-size: 0.9rem; color: var(--text-muted);">
+          Scan the QR code or enter the Receipt Slip Number to verify authenticity and tamper integrity via cryptographic HMAC seal.
+        </p>
+
+        <div style="display: flex; gap: 0.5rem; margin: 1rem 0;">
+          <input type="text" id="verify-slip-input" class="form-input" placeholder="e.g. HSL-2022-82194" style="flex: 1; font-weight: 700; font-size: 1rem; text-align: center; text-transform: uppercase;">
+          <button class="btn-ai-generate" onclick="runPublicVerification()">Verify Receipt</button>
+        </div>
+
+        <!-- Verification Result Card -->
+        <div id="verify-result-card" style="display: none; margin-top: 1rem; text-align: left; padding: 1.25rem; border-radius: var(--radius-lg); border: 1.5px solid var(--border);">
+          <!-- Dynamic Content -->
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================================
+         VIEW 4: ANALYTICS & AUDIT TRAIL HUB
+         ============================================================== -->
+    <section id="analytics-view" class="view-panel">
+      <div class="doctor-workspace-card">
+        
+        <div class="workspace-title-bar">
+          <div>
+            <h2>Clinic Analytics & HIPAA Security Audit Trail</h2>
+            <div class="workspace-subtitle">Live system telemetry, OTP verification logs, and patient medication adherence rates.</div>
+          </div>
+          <button class="sample-prompt-chip" onclick="loadAnalytics()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            Refresh Metrics
+          </button>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+          <div style="background: var(--surface-alt); padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">TOTAL RECEIPTS ISSUED</div>
+            <div id="metric-slips" style="font-size: 1.8rem; font-weight: 800; color: var(--navy); margin-top: 0.35rem;">-</div>
+          </div>
+          <div style="background: var(--surface-alt); padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">BILLING VOLUME</div>
+            <div id="metric-revenue" style="font-size: 1.8rem; font-weight: 800; color: var(--primary); margin-top: 0.35rem;">-</div>
+          </div>
+          <div style="background: var(--surface-alt); padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">OTP VERIFICATION SUCCESS</div>
+            <div id="metric-otp-rate" style="font-size: 1.8rem; font-weight: 800; color: var(--emerald-text); margin-top: 0.35rem;">-</div>
+          </div>
+          <div style="background: var(--surface-alt); padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">MEDICATION ADHERENCE</div>
+            <div id="metric-adherence" style="font-size: 1.8rem; font-weight: 800; color: var(--amber-dark); margin-top: 0.35rem;">-</div>
+          </div>
+        </div>
+
+        <!-- Database Engine Information -->
+        <div style="background: #f1f5f9; padding: 1rem; border-radius: var(--radius-md); border-left: 4px solid var(--primary);">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--navy);" id="metric-db-title">Database Engine: Checking...</div>
+          <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem;" id="metric-db-detail">Detail...</div>
+        </div>
+
+        <!-- Security Audit Trail Table -->
+        <div>
+          <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--navy); margin-bottom: 0.75rem;">Recent Security & Access Audit Trail</h3>
+          <div class="items-table-wrapper">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Action</th>
+                  <th>Actor</th>
+                  <th>Target / Phone</th>
+                  <th>Status</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="audit-trail-tbody">
+                <!-- Dynamically Populated Audit Rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==============================================================
+       MODAL 0: PRODUCTION-GRADE AUTHENTICATION & SESSION PORTAL
+       ============================================================== -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-card auth-modal-card">
+      <button class="modal-close-btn" onclick="closeAuthModal()">✕</button>
+
+      <div class="auth-header-pill">
+        <div class="modal-icon-badge" style="background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%); color: white; width: 44px; height: 44px; border-radius: var(--radius-md);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <div>
+          <div class="modal-title" style="text-align: left; margin-bottom: 2px; font-size: 1.15rem;">HealthSlip AI Identity Portal</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">HIPAA & Cryptographically Authenticated RBAC</div>
+        </div>
+      </div>
+
+      <!-- Quick 1-Click Demo Login Bar -->
+      <div class="auth-demo-bar">
+        <span class="auth-demo-label">1-Click Quick Demo Accounts:</span>
+        <div class="auth-demo-chips">
+          <button type="button" class="auth-demo-btn doctor" onclick="fillDemoCredentials('doctor')">
+            🩺 Doctor (Dr. Minh)
+          </button>
+          <button type="button" class="auth-demo-btn patient" onclick="fillDemoCredentials('patient')">
+            👤 Patient (Minh)
+          </button>
+          <button type="button" class="auth-demo-btn admin" onclick="fillDemoCredentials('admin')">
+            ⚡ Admin
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Auth Tabs -->
+      <div class="auth-tabs-row">
+        <button type="button" class="auth-tab-btn active" id="tab-auth-signin-btn" onclick="switchAuthTab('signin')">
+          Password Sign In
+        </button>
+        <button type="button" class="auth-tab-btn" id="tab-auth-otp-btn" onclick="switchAuthTab('otp')">
+          Mobile OTP Login
+        </button>
+        <button type="button" class="auth-tab-btn" id="tab-auth-register-btn" onclick="switchAuthTab('register')">
+          Create Account
+        </button>
+      </div>
+
+      <!-- Feedback / Error / Success Message Container -->
+      <div id="auth-feedback-msg" class="auth-feedback-box"></div>
+
+      <!-- TAB 1: Password Sign In -->
+      <form id="auth-content-signin" class="auth-tab-content active" onsubmit="submitLogin(event)">
+        <div class="input-group" style="text-align: left; margin-bottom: 0.85rem;">
+          <label class="input-label">Email or Mobile Number</label>
+          <div class="input-icon-wrapper">
+            <svg class="input-prefix-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" id="signin-identity" class="form-input with-prefix" placeholder="e.g. dr.minh@healthslip.ai" required autocomplete="username">
+          </div>
+        </div>
+
+        <div class="input-group" style="text-align: left; margin-bottom: 0.85rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label class="input-label">Password</label>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Demo: Doctor@2026 / Patient@2026</span>
+          </div>
+          <div class="input-icon-wrapper">
+            <svg class="input-prefix-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="signin-password" class="form-input with-prefix with-suffix" placeholder="Enter your password" required autocomplete="current-password">
+            <button type="button" class="btn-toggle-pass" onclick="togglePasswordVisibility('signin-password', this)" title="Toggle password visibility">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="7" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+          <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; color: var(--text-muted);">
+            <input type="checkbox" id="signin-remember" style="accent-color: var(--primary);">
+            Remember this session (30 days)
+          </label>
+          <a href="javascript:void(0)" onclick="switchAuthTab('otp')" style="font-size: 0.8rem; color: var(--primary); text-decoration: none; font-weight: 600;">Use Mobile OTP instead</a>
+        </div>
+
+        <button type="submit" class="btn-modal-action" id="btn-submit-signin" style="width: 100%;">
+          Sign In
+        </button>
+      </form>
+
+      <!-- TAB 2: Mobile OTP Login -->
+      <form id="auth-content-otp" class="auth-tab-content" onsubmit="submitOtpLogin(event)">
+        <div class="input-group" style="text-align: left; margin-bottom: 0.85rem;">
+          <label class="input-label">Registered Mobile Number</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="otp-login-phone" class="form-input" placeholder="+1 555-019-2834" value="+1 555-019-2834" style="flex: 1;">
+            <button type="button" class="btn-scan-action" style="padding: 0 1rem; font-size: 0.8rem; background: var(--primary); color: white;" onclick="requestOtpForLoginTab()">
+              Get Code
+            </button>
+          </div>
+        </div>
+
+        <div class="input-group" style="text-align: left; margin-bottom: 1.25rem;">
+          <label class="input-label">6-Digit Verification Code</label>
+          <input type="text" id="otp-login-code" class="form-input" placeholder="e.g. 123456" maxlength="6" style="letter-spacing: 0.25em; font-size: 1.1rem; text-align: center; font-weight: 700;">
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+            In Sandbox mode, click "Get Code" and it will auto-verify immediately.
+          </div>
+        </div>
+
+        <button type="submit" class="btn-modal-action" id="btn-submit-otp-login" style="width: 100%;">
+          Verify & Sign In
+        </button>
+      </form>
+
+      <!-- TAB 3: Create Account -->
+      <form id="auth-content-register" class="auth-tab-content" onsubmit="submitRegister(event)">
+        <div class="input-group" style="text-align: left; margin-bottom: 0.75rem;">
+          <label class="input-label">Full Legal Name</label>
+          <input type="text" id="reg-fullname" class="form-input" placeholder="e.g. Dr. Jane Doe or Alex Smith" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div class="input-group" style="text-align: left;">
+            <label class="input-label">Email Address</label>
+            <input type="email" id="reg-email" class="form-input" placeholder="name@example.com" required autocomplete="email">
+          </div>
+          <div class="input-group" style="text-align: left;">
+            <label class="input-label">Mobile Number</label>
+            <input type="tel" id="reg-phone" class="form-input" placeholder="+1 555-012-3456" required autocomplete="tel">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div class="input-group" style="text-align: left;">
+            <label class="input-label">Portal Account Role</label>
+            <select id="reg-role" class="form-input">
+              <option value="PATIENT">Patient Account</option>
+              <option value="DOCTOR">Medical Practitioner / Doctor</option>
+            </select>
+          </div>
+          <div class="input-group" id="reg-license-group" style="text-align: left;">
+            <label class="input-label">Medical License #</label>
+            <input type="text" id="reg-license" class="form-input" placeholder="e.g. MED-2026-9921">
+          </div>
+        </div>
+
+        <div class="input-group" style="text-align: left; margin-bottom: 1.25rem;">
+          <label class="input-label">Password</label>
+          <div class="input-icon-wrapper">
+            <input type="password" id="reg-password" class="form-input with-suffix" placeholder="At least 6 characters" required oninput="evaluatePasswordStrength(this.value)">
+            <button type="button" class="btn-toggle-pass" onclick="togglePasswordVisibility('reg-password', this)" title="Toggle password visibility">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="7" r="3"/></svg>
+            </button>
+          </div>
+          <!-- Real-Time Password Strength Meter -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 5px;">
+            <div class="password-strength-track">
+              <div class="password-strength-fill" id="reg-password-strength-bar"></div>
+            </div>
+            <span id="reg-password-strength-label" style="font-size: 0.72rem; font-weight: 700;"></span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-modal-action" id="btn-submit-reg" style="width: 100%;">
+          Create Account & Sign In
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       MODAL 1: OTP PATIENT VERIFICATION MODAL
+       ============================================================== -->
+  <div class="modal-overlay" id="otp-modal">
+    <div class="modal-card">
+      <button class="modal-close-btn" onclick="closeOtpModal()">✕</button>
+      
+      <div class="modal-icon-badge">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+
+      <div class="modal-title">Patient Verification</div>
+      <div class="modal-desc">
+        To protect patient health privacy (HIPAA), enter the registered mobile number to receive a secure 6-digit one-time code.
+      </div>
+
+      <!-- Step A: Enter Phone -->
+      <div id="otp-step-phone">
+        <div class="input-group" style="text-align: left; margin-bottom: 1rem;">
+          <label class="input-label">Patient Mobile Number</label>
+          <input type="text" id="otp-input-phone" class="form-input" value="+1 555-019-2834" placeholder="+1 555-019-2834">
+        </div>
+        <button class="btn-modal-action" style="width: 100%;" onclick="requestOtpCode()">
+          Send Verification Code
+        </button>
+      </div>
+
+      <!-- Step B: Enter 6-digit OTP -->
+      <div id="otp-step-code" style="display: none;">
+        <!-- Dev Sandbox Toast helper -->
+        <div class="dev-otp-toast" id="dev-sandbox-toast">
+          <span>Sandbox OTP (Click to Fill):</span>
+          <span class="dev-otp-code" id="dev-sandbox-code" onclick="autoFillSandboxOtp()" style="cursor: pointer;" title="Click to auto-fill">------</span>
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin: 0.75rem 0 0.5rem;">
+          Enter 6-digit verification code:
+        </div>
+
+        <div class="otp-inputs-row">
+          <input type="text" maxlength="1" class="otp-digit" id="otp-d1" oninput="handleOtpInput(this, 'otp-d2')">
+          <input type="text" maxlength="1" class="otp-digit" id="otp-d2" oninput="handleOtpInput(this, 'otp-d3')">
+          <input type="text" maxlength="1" class="otp-digit" id="otp-d3" oninput="handleOtpInput(this, 'otp-d4')">
+          <input type="text" maxlength="1" class="otp-digit" id="otp-d4" oninput="handleOtpInput(this, 'otp-d5')">
+          <input type="text" maxlength="1" class="otp-digit" id="otp-d5" oninput="handleOtpInput(this, 'otp-d6')">
+          <input type="text" maxlength="1" class="otp-digit" id="otp-d6" oninput="handleOtpInput(this, null)">
+        </div>
+
+        <div id="otp-timer-label" style="font-size: 0.78rem; color: var(--text-muted); margin: 0.75rem 0;">
+          Code expires in <span id="otp-timer-val" style="font-weight: 700; color: var(--navy);">05:00</span>
+        </div>
+
+        <button class="btn-modal-action" style="width: 100%;" onclick="submitVerifyOtp()">
+          Verify Identity & Access Slips
+        </button>
+
+        <button style="border: none; background: transparent; color: var(--primary); font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem;" onclick="requestOtpCode()">
+          Resend Code
+        </button>
+      </div>
+
+      <div id="otp-feedback-msg" style="font-size: 0.8rem; font-weight: 600;"></div>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       MODAL 2: QR CAMERA SCANNER SIMULATOR
+       ============================================================== -->
+  <div class="modal-overlay" id="scanner-modal">
+    <div class="modal-card">
+      <button class="modal-close-btn" onclick="closeScannerModal()">✕</button>
+      <div class="modal-title">Receipt QR Scanner</div>
+      <div class="modal-desc">Point camera at the official HealthSlip QR code on patient receipt.</div>
+      
+      <!-- Visual camera scanner viewfinder -->
+      <div style="width: 100%; height: 200px; background: #0f172a; border-radius: var(--radius-md); position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white;">
+        <div style="width: 130px; height: 130px; border: 2px solid #38bdf8; border-radius: 8px; position: relative;">
+          <!-- Laser animation line -->
+          <div style="position: absolute; left: 0; right: 0; height: 2px; background: #38bdf8; box-shadow: 0 0 10px #38bdf8; animation: scanLaser 2s infinite ease-in-out;"></div>
+        </div>
+        <span style="position: absolute; bottom: 8px; font-size: 0.75rem; color: #94a3b8;">HealthSlip AI Optical Sensor Active</span>
+      </div>
+
+      <style>
+        @keyframes scanLaser {
+          0% { top: 0%; }
+          50% { top: 100%; }
+          100% { top: 0%; }
+        }
+      </style>
+
+      <button class="btn-modal-action" onclick="simulateScanDetected()">
+        Simulate Detected QR Code
+      </button>
+    </div>
+  </div>
+
+  <!-- JavaScript Client Logic -->
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/auth.js"></script>
+  <script src="/static/js/reminders.js"></script>
+  <script src="/static/js/doctor.js"></script>
+  <script src="/static/js/patient.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
