@@ -216,3 +216,112 @@ def test_auth_register_and_status():
     # 3. Logout
     client.post("/api/auth/logout", headers={"Authorization": f"Bearer {token}"})
 
+def test_pharmacy_inventory_and_stock_adjust():
+    # 1. Fetch inventory
+    inv_resp = client.get("/api/pharmacy/inventory")
+    assert inv_resp.status_code == 200
+    data = inv_resp.json()
+    assert data["total_items"] > 0
+    assert len(data["items"]) > 0
+
+    first_item = data["items"][0]
+    initial_stock = first_item["stock_quantity"]
+
+    # 2. Adjust stock
+    adj_resp = client.post("/api/pharmacy/inventory/adjust", json={
+        "medicine_id": first_item["id"],
+        "quantity_change": 15
+    })
+    assert adj_resp.status_code == 200
+    adj_data = adj_resp.json()
+    assert adj_data["success"] is True
+    assert adj_data["stock_quantity"] == initial_stock + 15
+
+def test_pharmacy_generic_lookup_and_rural_savings():
+    # 1. Generic lookup for Augmentin
+    lookup_resp = client.post("/api/pharmacy/generic-lookup", json={
+        "medicine_name": "Augmentin 625mg"
+    })
+    assert lookup_resp.status_code == 200
+    lookup_data = lookup_resp.json()
+    assert lookup_data["matched"] is True
+    assert "Amoxicillin" in lookup_data["generic_name"]
+    assert lookup_data["savings_percent"] > 70.0
+
+def test_pharmacy_dispense_and_anti_double_dispensing_lock():
+    # 1. Create a fresh slip to dispense
+    slip_payload = {
+        "patient": {"full_name": "Ramesh Kumar", "age": 45, "gender": "Male", "phone": "+919876543210"},
+        "doctor_name": "Dr. Minh Nguyen, M.D.",
+        "doctor_license": "MED-2024-8841",
+        "clinic_name": "Rural Health Outreach Center",
+        "diagnosis": "Bacterial Sinusitis",
+        "items": [
+            {"item_type": "MEDICATION", "item_name": "Augmentin 625mg", "unit_price": 18.5, "quantity": 1}
+        ],
+        "reminders": [
+            {"medicine_name": "Augmentin", "dosage": "1 tablet", "timing_slot": "MORNING", "schedule_time": "08:00 am"}
+        ]
+    }
+    create_resp = client.post("/api/receipts", json=slip_payload)
+    assert create_resp.status_code == 200
+    slip_no = create_resp.json()["slip_number"]
+
+    # 2. Dispense at Rural Seva Medical Store with Jan Aushadhi generic substitution
+    disp_resp = client.post("/api/pharmacy/dispense", json={
+        "slip_number": slip_no,
+        "store_type": "RURAL",
+        "pharmacist_name": "Seva Pharmacist Anita",
+        "is_generic_substituted": True,
+        "notes": "Jan Aushadhi generic salt supplied to patient."
+    })
+    assert disp_resp.status_code == 200
+    disp_data = disp_resp.json()
+    assert disp_data["success"] is True
+    assert disp_data["status"] == "DISPENSED"
+    assert len(disp_data["cryptographic_lock"]) == 64
+
+    # 3. Double-dispensing fraud prevention check:
+    # Attempting to dispense the same slip again at an Urban pharmacy must be blocked
+    fraud_resp = client.post("/api/pharmacy/dispense", json={
+        "slip_number": slip_no,
+        "store_type": "URBAN",
+        "pharmacist_name": "Urban Pharmacy Counter 2"
+    })
+    assert fraud_resp.status_code == 400
+    assert "ALREADY BEEN DISPENSED" in fraud_resp.json()["detail"]
+
+def test_rural_voice_and_sms_generation():
+    # 1. Test Rural 2G SMS generator
+    recent_receipts = client.get("/api/receipts").json()
+    assert len(recent_receipts) > 0
+    slip_no = recent_receipts[0]["slip_number"]
+
+    sms_resp = client.post("/api/pharmacy/sms-slip", json={"slip_number": slip_no})
+    assert sms_resp.status_code == 200
+    sms_data = sms_resp.json()
+    assert sms_data["char_count"] <= 160
+    assert sms_data["is_gsm7_compliant"] is True
+
+    # 2. Test Multilingual Audio Dosage Voice Scripts
+    audio_hi_resp = client.post("/api/pharmacy/audio-dosage", json={
+        "medicine_name": "Crocin 650mg",
+        "language": "hi"
+    })
+    assert audio_hi_resp.status_code == 200
+    assert "गोली" in audio_hi_resp.json()["speech_text"]
+
+    audio_en_resp = client.post("/api/pharmacy/audio-dosage", json={
+        "medicine_name": "Crocin 650mg",
+        "language": "en"
+    })
+    assert audio_en_resp.status_code == 200
+    assert "tablet" in audio_en_resp.json()["speech_text"].lower()
+
+def test_websocket_realtime_connection():
+    with client.websocket_connect("/ws/live") as websocket:
+        data = websocket.receive_json()
+        assert data["event"] == "CONNECTED"
+        assert "HealthSlip AI Real-Time" in data["data"]["message"]
+
+

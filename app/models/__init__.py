@@ -1,6 +1,7 @@
 from app.models.user import Role, User, UserRole, Patient, Practitioner, UserSession
 from app.models.receipt import Medicine, Prescription, PrescriptionItem, DoseSchedule, Bill, BillItem, Receipt, Reminder
 from app.models.verification import AuthOtp, NotificationDeliveryLog, AuditEvent, ConsentRecord, SchemaMigration, BackupHistory
+from app.models.pharmacy import PharmacyMedicineStock, DispenseOrder
 
 # Legacy/friendly aliases for service compatibility
 Doctor = Practitioner
@@ -36,5 +37,7 @@ __all__ = [
     "SchemaMigration",
     "BackupHistory",
     "OtpVerification",
-    "AuditLog"
+    "AuditLog",
+    "PharmacyMedicineStock",
+    "DispenseOrder"
 ]

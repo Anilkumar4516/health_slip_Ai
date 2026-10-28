@@ -50,6 +50,18 @@ def toggle_reminder_status(reminder_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(rem)
 
+    # Real-time WebSocket broadcast of dose adherence
+    try:
+        from app.services.websocket_manager import ws_manager
+        ws_manager.sync_broadcast("REMINDER_TOGGLED", {
+            "reminder_id": rem.id,
+            "medicine_name": rem.medicine_name,
+            "is_done": rem.is_done,
+            "status": rem.status
+        })
+    except Exception:
+        pass
+
     return MedicationReminderResponse(
         id=rem.id,
         health_slip_id=1,

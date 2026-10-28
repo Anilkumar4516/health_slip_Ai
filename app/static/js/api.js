@@ -181,5 +181,41 @@ const API = {
     } catch (err) {
       return { authenticated: false, error: err.message };
     }
+  },
+
+  // Urban & Rural Medical Store (Pharmacy) APIs
+  async getPharmacyInventory() {
+    return this.get('/api/pharmacy/inventory');
+  },
+
+  async getPharmacyQueue(storeType = 'URBAN') {
+    return this.get(`/api/pharmacy/queue?store_type=${encodeURIComponent(storeType)}`);
+  },
+
+  async dispensePrescription(payload) {
+    return this.post('/api/pharmacy/dispense', payload);
+  },
+
+  async lookupGeneric(medicineName) {
+    return this.post('/api/pharmacy/generic-lookup', { medicine_name: medicineName });
+  },
+
+  async getPrescriptionSavings(slipNumber) {
+    return this.get(`/api/pharmacy/prescription-savings/${encodeURIComponent(slipNumber)}`);
+  },
+
+  async getRuralSmsSlip(slipNumber) {
+    return this.post('/api/pharmacy/sms-slip', { slip_number: slipNumber });
+  },
+
+  async getAudioDosageScript(medicineName, language = 'hi') {
+    return this.post('/api/pharmacy/audio-dosage', { medicine_name: medicineName, language });
+  },
+
+  async adjustStock(medicineId, quantityChange) {
+    return this.post('/api/pharmacy/inventory/adjust', {
+      medicine_id: medicineId,
+      quantity_change: quantityChange
+    });
   }
 };

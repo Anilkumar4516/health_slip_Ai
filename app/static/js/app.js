@@ -49,6 +49,14 @@ function switchView(viewId) {
 
   if (viewId === 'patient-view') document.getElementById('tab-patient-btn')?.classList.add('active');
   if (viewId === 'doctor-view') document.getElementById('tab-doctor-btn')?.classList.add('active');
+  if (viewId === 'pharmacy-view') {
+    document.getElementById('tab-pharmacy-btn')?.classList.add('active');
+    if (typeof loadPharmacyData === 'function') loadPharmacyData();
+    if (typeof unreadPrescriptionsCount !== 'undefined') {
+      unreadPrescriptionsCount = 0;
+      if (typeof updateNavbarBadge === 'function') updateNavbarBadge();
+    }
+  }
   if (viewId === 'verify-view') document.getElementById('tab-verify-btn')?.classList.add('active');
   if (viewId === 'analytics-view') {
     document.getElementById('tab-analytics-btn')?.classList.add('active');

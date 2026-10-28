@@ -303,7 +303,25 @@ class ReceiptService:
         db.refresh(receipt)
         db.refresh(bill)
 
-        return ReceiptService.build_slip_view_model(bill, receipt)
+        slip_result = ReceiptService.build_slip_view_model(bill, receipt)
+
+        # Real-time WebSocket broadcast to all urban/rural medical stores & dashboards
+        try:
+            from app.services.websocket_manager import ws_manager
+            ws_manager.sync_broadcast("NEW_PRESCRIPTION", {
+                "slip_number": slip_number,
+                "patient_name": patient.full_name if patient else "Patient",
+                "patient_phone": clean_phone,
+                "doctor_name": practitioner.name if practitioner else "Doctor",
+                "diagnosis": slip_data.diagnosis,
+                "grand_total": grand_total,
+                "items_count": len(slip_data.items),
+                "created_at": now.isoformat()
+            })
+        except Exception:
+            pass
+
+        return slip_result
 
     @staticmethod
     def build_slip_view_model(bill: Bill, receipt: Receipt) -> Dict[str, Any]:

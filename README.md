@@ -38,6 +38,22 @@ Inspired by modern clinical apps, HealthSlip AI bridges the gap between fast cli
 ### 5. 📄 Official PDF Receipt Generator
 - Generates professional medical invoices via **ReportLab** with hospital branding, physician license, patient demographics, itemized table, dosage schedules, QR code, and HMAC seal.
 
+### 6. ⚡ Real-Time WebSockets & Inflow Synchronization
+- **Live Bidirectional WebSockets (`/ws/live`)**: Connects doctors, pharmacies, and patients with instant push notifications (zero manual polling).
+- **Audio Chime & Live Toast Banners**: Synthesizes audible chimes and instant notifications upon new prescription arrivals.
+- **Dynamic Counters**: Live unread badges update immediately when a doctor issues a slip.
+
+### 7. 🏪 Urban & Rural Medical Store Hub (Dual-Mode)
+- 🏢 **Urban Smart Pharmacy Mode (High-Velocity POS)**:
+  - **Live Dispatch Queue**: Real-time incoming prescriptions direct from clinical doctors.
+  - **Inventory & Batch Tracking**: Live stock counts, reorder warnings, and quick restock buttons.
+  - **Cryptographic Anti-Double Dispensing Lock**: Seals dispensed prescriptions with HMAC-SHA256, mathematically preventing duplicate dispensing across different medical stores.
+- 🌾 **Rural Seva Medical Store Mode (Affordability & Accessibility)**:
+  - **Jan Aushadhi Generic Medicine Cost Saver**: Automatically identifies government-certified bio-equivalent generic salts for expensive branded drugs, calculating 70% to 85% price savings for rural families with one-click generic substitution.
+  - **Vernacular Voice Dosage Explainer (Hindi & English TTS)**: Text-to-speech audio reader that speaks out clear dosage instructions in local languages for illiterate or elderly rural patients, accompanied by visual glyphs (🌅 Morning Sun, ☀️ Afternoon, 🌙 Bedtime Moon, 🍽️ Post-Meal).
+  - **2G Keypad SMS Slip**: Generates concise GSM-7 compliant SMS slips (< 160 characters) tailored for basic non-smartphone keypad phones.
+  - **Offline-First Synchronization**: Caches transactions locally in browser storage when rural cellular networks fail, syncing automatically when connectivity resumes.
+
 ---
 
 ## 🏗️ Technology Stack

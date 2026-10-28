@@ -36,6 +36,11 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 2a2 2 0 0 0-2 2v2H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2V4a2 2 0 0 0-2-2h-2z"/><path d="M12 11v6"/><path d="M9 14h6"/></svg>
         Doctor AI Slip Builder
       </button>
+      <button class="nav-tab-btn" id="tab-pharmacy-btn" onclick="switchView('pharmacy-view')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+        Medical Store
+        <span class="nav-counter-badge" id="pharmacy-nav-badge" style="display: none;">0 New</span>
+      </button>
       <button class="nav-tab-btn" id="tab-otp-btn" onclick="openOtpModal()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         OTP Verification
@@ -425,6 +430,128 @@
     </section>
 
     <!-- ==============================================================
+         VIEW: MEDICAL STORE & PHARMACY (URBAN & RURAL)
+         ============================================================== -->
+    <section id="pharmacy-view" class="view-panel">
+      <div class="doctor-workspace-card">
+
+        <!-- Top Controls: Mode Switcher & Real-Time Sync Status -->
+        <div class="workspace-title-bar" style="flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <h2>Medical Store & Clinical Pharmacy Hub</h2>
+              <div id="pharmacy-realtime-badge" class="realtime-status-pill online">
+                <span id="pharmacy-realtime-dot" class="status-pulse-dot green"></span>
+                <span id="pharmacy-realtime-text">Live Sync: Active</span>
+              </div>
+            </div>
+            <div class="workspace-subtitle">
+              Live prescription fulfillment, Jan Aushadhi generic drug cost saver, vernacular voice reader, and anti-double dispensing cryptographic lock.
+            </div>
+          </div>
+
+          <!-- Store Mode Selector Toggle -->
+          <div class="store-mode-toggle-group">
+            <button id="btn-mode-urban" class="btn-mode-toggle active" onclick="setStoreMode('URBAN')">
+              🏢 Urban Smart Pharmacy
+            </button>
+            <button id="btn-mode-rural" class="btn-mode-toggle" onclick="setStoreMode('RURAL')">
+              🌾 Rural Seva Medical Store
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode Specific Context Banners -->
+        <div id="banner-urban-mode" class="mode-info-banner urban">
+          <div class="banner-icon">🏢</div>
+          <div>
+            <strong>Urban High-Velocity Pharmacy POS Active</strong>
+            <p>Real-time queue dispatch from doctor clinics, batch stock deduction, and cryptographic anti-double dispensing locks.</p>
+          </div>
+        </div>
+
+        <div id="banner-rural-mode" class="mode-info-banner rural" style="display: none;">
+          <div class="banner-icon">🌾</div>
+          <div>
+            <strong>Rural Seva Medical Store Mode Active (Affordability & Accessibility)</strong>
+            <p>Jan Aushadhi generic medicine substitution (Save 75-85%), Multilingual Voice Explainer (Hindi/English TTS), 2G Keypad SMS Slip, and Offline-First Local Sync Queue.</p>
+          </div>
+        </div>
+
+        <!-- Main Workspace 2-Column Layout -->
+        <div class="pharmacy-grid">
+          
+          <!-- Column 1: Live Inflow Prescription Queue -->
+          <div class="pharmacy-column">
+            <div class="column-header-bar">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="live-inflow-dot"></span>
+                <h3>Live Incoming Prescriptions</h3>
+              </div>
+              <button class="btn-refresh-pill" onclick="loadPharmacyData()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                Sync Queue
+              </button>
+            </div>
+
+            <!-- Queue List Container -->
+            <div id="pharmacy-queue-list" class="queue-cards-container">
+              <!-- Dynamically populated by pharmacy.js -->
+            </div>
+          </div>
+
+          <!-- Column 2: Medicine Inventory, Stock Alerts & Security Guard -->
+          <div class="pharmacy-column">
+            
+            <!-- Stock & Inventory Card -->
+            <div class="sub-panel-card">
+              <div class="column-header-bar">
+                <h3>Pharmacy Inventory & Low-Stock Tracker</h3>
+                <div class="inv-metrics-tags">
+                  <span class="metric-pill">Total: <strong id="inv-metric-total">0</strong></span>
+                  <span class="metric-pill warning">Low Stock: <strong id="inv-metric-low">0</strong></span>
+                </div>
+              </div>
+
+              <div class="table-scroll-container">
+                <table class="pharmacy-table">
+                  <thead>
+                    <tr>
+                      <th>Medicine / Generic Salt</th>
+                      <th>Batch</th>
+                      <th>Stock Level</th>
+                      <th>Price (Brand vs Generic)</th>
+                      <th>Quick Restock</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pharmacy-inventory-tbody">
+                    <!-- Populated by pharmacy.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Anti-Double Dispensing Cryptographic Guard -->
+            <div class="sub-panel-card security-guard-card">
+              <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                <div class="guard-icon">🛡️</div>
+                <div>
+                  <h4>Cryptographic Anti-Double Dispensing Lock</h4>
+                  <p>
+                    Every dispensed prescription is sealed with an HMAC-SHA256 signature containing the store ID and timestamp. If a patient attempts to reuse the same prescription slip at another pharmacy, the transaction is immediately rejected and audited.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================================
          VIEW 3: PUBLIC QR CODE VERIFIER
          ============================================================== -->
     <section id="verify-view" class="view-panel">
@@ -792,6 +919,7 @@
   <script src="/static/js/auth.js"></script>
   <script src="/static/js/reminders.js"></script>
   <script src="/static/js/doctor.js"></script>
+  <script src="/static/js/pharmacy.js"></script>
   <script src="/static/js/patient.js"></script>
   <script src="/static/js/app.js"></script>
 </body>

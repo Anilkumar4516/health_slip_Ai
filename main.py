@@ -1,5 +1,6 @@
 import os
 import datetime
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -7,12 +8,15 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base, SessionLocal, get_db_status
-from app.routes import receipts, otp, reminders, verification, stats, auth
+from app.routes import receipts, otp, reminders, verification, stats, auth, pharmacy, realtime
 from app.models.receipt import Receipt
 from app.models.user import Role, User, UserRole
+from app.models.pharmacy import PharmacyMedicineStock, DispenseOrder
 from app.schemas.receipt import HealthSlipCreate, ReceiptItemCreate, MedicationReminderCreate, PatientEmbeddedCreate
 from app.services.receipt_service import ReceiptService
 from app.services.auth_service import AuthService
+from app.services.generic_drug_service import GenericDrugService
+from app.services.websocket_manager import ws_manager
 
 # Safe create_all (skips existing tables)
 try:
@@ -160,7 +164,27 @@ def seed_initial_demo_data():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Bind event loop for real-time WebSocket broadcasting
+    try:
+        ws_manager.set_loop(asyncio.get_running_loop())
+    except Exception:
+        pass
+
+    # Ensure tables are created
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass
+
     seed_initial_demo_data()
+
+    # Seed Urban & Rural Pharmacy Inventory
+    db = SessionLocal()
+    try:
+        GenericDrugService.seed_inventory_if_empty(db)
+    finally:
+        db.close()
+
     yield
 
 app = FastAPI(
@@ -189,6 +213,8 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Include API Routers
 app.include_router(auth.router)
 app.include_router(receipts.router)
+app.include_router(pharmacy.router)
+app.include_router(realtime.router)
 app.include_router(otp.router)
 app.include_router(reminders.router)
 app.include_router(verification.router)
