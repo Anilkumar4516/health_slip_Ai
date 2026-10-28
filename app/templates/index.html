@@ -435,29 +435,33 @@
     <section id="pharmacy-view" class="view-panel">
       <div class="doctor-workspace-card">
 
-        <!-- Top Controls: Mode Switcher & Real-Time Sync Status -->
-        <div class="workspace-title-bar" style="flex-wrap: wrap; gap: 1rem;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <h2>Medical Store & Clinical Pharmacy Hub</h2>
-              <div id="pharmacy-realtime-badge" class="realtime-status-pill online">
-                <span id="pharmacy-realtime-dot" class="status-pulse-dot green"></span>
-                <span id="pharmacy-realtime-text">Live Sync: Active</span>
+        <!-- Real Medical Store Identity & License Bar -->
+        <div class="pharmacy-store-meta-bar">
+          <div class="store-meta-brand">
+            <div class="store-meta-icon">🏪</div>
+            <div>
+              <div class="store-meta-title">HealthSlip Seva & Clinical Medical Store</div>
+              <div class="store-meta-sub">
+                <span>Drug Lic: <strong>20-B/48912 & 21-B/48913</strong></span> • 
+                <span>GSTIN: <strong>07AAAAA0000A1Z5</strong></span> • 
+                <span>Duty Pharmacist: <strong>R. Sharma, B.Pharm (Reg #PH-9841)</strong></span>
               </div>
             </div>
-            <div class="workspace-subtitle">
-              Live prescription fulfillment, Jan Aushadhi generic drug cost saver, vernacular voice reader, and anti-double dispensing cryptographic lock.
-            </div>
           </div>
-
-          <!-- Store Mode Selector Toggle -->
-          <div class="store-mode-toggle-group">
-            <button id="btn-mode-urban" class="btn-mode-toggle active" onclick="setStoreMode('URBAN')">
-              🏢 Urban Smart Pharmacy
-            </button>
-            <button id="btn-mode-rural" class="btn-mode-toggle" onclick="setStoreMode('RURAL')">
-              🌾 Rural Seva Medical Store
-            </button>
+          <div class="store-meta-actions">
+            <div id="pharmacy-realtime-badge" class="realtime-status-pill online">
+              <span id="pharmacy-realtime-dot" class="status-pulse-dot green"></span>
+              <span id="pharmacy-realtime-text">Live Sync: Active</span>
+            </div>
+            <!-- Store Mode Selector Toggle -->
+            <div class="store-mode-toggle-group">
+              <button id="btn-mode-urban" class="btn-mode-toggle active" onclick="setStoreMode('URBAN')">
+                🏢 Urban Smart Pharmacy
+              </button>
+              <button id="btn-mode-rural" class="btn-mode-toggle" onclick="setStoreMode('RURAL')">
+                🌾 Rural Seva Store (Jan Aushadhi)
+              </button>
+            </div>
           </div>
         </div>
 
@@ -466,7 +470,7 @@
           <div class="banner-icon">🏢</div>
           <div>
             <strong>Urban High-Velocity Pharmacy POS Active</strong>
-            <p>Real-time queue dispatch from doctor clinics, batch stock deduction, and cryptographic anti-double dispensing locks.</p>
+            <p>Real-time doctor queue streaming, instant stock depletion, GST tax invoices, and cryptographic anti-double dispensing locks.</p>
           </div>
         </div>
 
@@ -478,6 +482,27 @@
           </div>
         </div>
 
+        <!-- Prescription Search & Barcode Quick-Load Bar -->
+        <div class="pharmacy-search-control-bar">
+          <div class="search-input-wrapper" style="flex: 1.5;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="pharmacy-search-input" placeholder="Search patient name, phone, slip ID, medicine..." oninput="filterPharmacyQueue()">
+          </div>
+
+          <div class="barcode-quick-loader" style="flex: 1;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/></svg>
+            <input type="text" id="barcode-slip-input" placeholder="Scan or enter Slip ID (e.g. HSL-2026-XXXX)">
+            <button class="btn-barcode-load" onclick="loadSlipByBarcode()">Load Rx</button>
+          </div>
+
+          <!-- Queue Status Filter Pills -->
+          <div class="queue-filter-pills">
+            <button class="filter-pill active" id="filter-all-btn" onclick="applyQueueFilter('ALL')">All</button>
+            <button class="filter-pill" id="filter-pending-btn" onclick="applyQueueFilter('PENDING')">Awaiting Dispense</button>
+            <button class="filter-pill" id="filter-dispensed-btn" onclick="applyQueueFilter('DISPENSED')">Dispensed & Locked</button>
+          </div>
+        </div>
+
         <!-- Main Workspace 2-Column Layout -->
         <div class="pharmacy-grid">
           
@@ -486,7 +511,7 @@
             <div class="column-header-bar">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span class="live-inflow-dot"></span>
-                <h3>Live Incoming Prescriptions</h3>
+                <h3>Prescription Inflow Queue (<span id="queue-visible-count">0</span>)</h3>
               </div>
               <button class="btn-refresh-pill" onclick="loadPharmacyData()">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
@@ -506,11 +531,21 @@
             <!-- Stock & Inventory Card -->
             <div class="sub-panel-card">
               <div class="column-header-bar">
-                <h3>Pharmacy Inventory & Low-Stock Tracker</h3>
-                <div class="inv-metrics-tags">
-                  <span class="metric-pill">Total: <strong id="inv-metric-total">0</strong></span>
-                  <span class="metric-pill warning">Low Stock: <strong id="inv-metric-low">0</strong></span>
+                <div>
+                  <h3>Pharmacy Inventory & Batch Tracker</h3>
+                  <div class="inv-metrics-tags" style="margin-top: 4px;">
+                    <span class="metric-pill">Stock Items: <strong id="inv-metric-total">0</strong></span>
+                    <span class="metric-pill warning">Low Stock: <strong id="inv-metric-low">0</strong></span>
+                  </div>
                 </div>
+                <button class="btn-add-stock-trigger" onclick="openAddMedicineModal()">
+                  + Add Medicine Batch
+                </button>
+              </div>
+
+              <!-- Inventory Search Input -->
+              <div class="inventory-search-row">
+                <input type="text" id="inventory-search-input" placeholder="Search brand, generic salt, batch number..." oninput="filterInventoryTable()">
               </div>
 
               <div class="table-scroll-container">
@@ -518,7 +553,7 @@
                   <thead>
                     <tr>
                       <th>Medicine / Generic Salt</th>
-                      <th>Batch</th>
+                      <th>Batch & Exp</th>
                       <th>Stock Level</th>
                       <th>Price (Brand vs Generic)</th>
                       <th>Quick Restock</th>
@@ -536,9 +571,9 @@
               <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
                 <div class="guard-icon">🛡️</div>
                 <div>
-                  <h4>Cryptographic Anti-Double Dispensing Lock</h4>
+                  <h4>Cryptographic Anti-Double Dispensing Lock (HMAC-SHA256)</h4>
                   <p>
-                    Every dispensed prescription is sealed with an HMAC-SHA256 signature containing the store ID and timestamp. If a patient attempts to reuse the same prescription slip at another pharmacy, the transaction is immediately rejected and audited.
+                    Every dispensed prescription receives a tamper-proof digital seal linking the slip number, dispensing pharmacy license, and timestamp. If a patient attempts to reuse the same prescription slip at another pharmacy, the transaction is immediately rejected and audited.
                   </p>
                 </div>
               </div>
@@ -911,6 +946,141 @@
       <button class="btn-modal-action" onclick="simulateScanDetected()">
         Simulate Detected QR Code
       </button>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       MODAL: OFFICIAL MEDICAL STORE THERMAL CASH MEMO / INVOICE
+       ============================================================== -->
+  <div class="custom-modal-backdrop" id="pharmacy-invoice-modal" style="display: none;">
+    <div class="custom-modal-dialog thermal-memo-dialog">
+      <div class="thermal-memo-header">
+        <button class="modal-close-btn" onclick="closePharmacyInvoiceModal()">&times;</button>
+        <div class="thermal-store-name" id="memo-store-name">HealthSlip Seva & Clinical Medical Store</div>
+        <div class="thermal-store-sub" id="memo-store-sub">
+          DL: 20-B/48912 & 21-B/48913 • GSTIN: 07AAAAA0000A1Z5<br>
+          Opp. Community Health Center, Main Road
+        </div>
+        <div class="thermal-divider"></div>
+        <div class="thermal-title-tag">TAX INVOICE / CASH MEMO</div>
+      </div>
+
+      <div class="thermal-meta-grid" id="memo-meta-details">
+        <!-- Filled dynamically by pharmacy.js -->
+      </div>
+
+      <div class="thermal-divider"></div>
+
+      <div class="thermal-table-wrapper">
+        <table class="thermal-table">
+          <thead>
+            <tr>
+              <th>Item / Salt</th>
+              <th>Batch</th>
+              <th>Qty</th>
+              <th>MRP</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody id="memo-items-tbody">
+            <!-- Filled dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="thermal-divider"></div>
+
+      <div class="thermal-totals-section" id="memo-totals-section">
+        <!-- Totals, Savings, GST -->
+      </div>
+
+      <div class="thermal-seal-box" id="memo-seal-box">
+        <!-- Cryptographic Seal & Pharmacist Sign -->
+      </div>
+
+      <div class="thermal-actions-bar">
+        <button class="btn-thermal-print" onclick="window.print()">
+          🖨️ Print Cash Memo
+        </button>
+        <button class="btn-thermal-close" onclick="closePharmacyInvoiceModal()">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       MODAL: ADD NEW MEDICINE BATCH TO PHARMACY INVENTORY
+       ============================================================== -->
+  <div class="custom-modal-backdrop" id="add-medicine-modal" style="display: none;">
+    <div class="custom-modal-dialog" style="max-width: 520px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+        <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-main);">+ Add New Medicine Batch to Inventory</h3>
+        <button class="modal-close-btn" onclick="closeAddMedicineModal()">&times;</button>
+      </div>
+
+      <form id="add-medicine-form" onsubmit="submitNewMedicine(event)">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Brand / Trade Name *</label>
+            <input type="text" id="add-med-brand" class="form-input" placeholder="e.g. Augmentin 625mg" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Chemical / Generic Salt *</label>
+            <input type="text" id="add-med-generic" class="form-input" placeholder="e.g. Amoxicillin + Pot. Clavulanate" required>
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label">Form</label>
+            <select id="add-med-form" class="form-select">
+              <option value="Tablet">Tablet</option>
+              <option value="Capsule">Capsule</option>
+              <option value="Syrup">Syrup</option>
+              <option value="Injection">Injection</option>
+              <option value="Drops">Drops</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Strength</label>
+            <input type="text" id="add-med-strength" class="form-input" placeholder="e.g. 625mg">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Batch No. *</label>
+            <input type="text" id="add-med-batch" class="form-input" placeholder="e.g. B-2026-X9" required>
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label">Stock Units *</label>
+            <input type="number" id="add-med-qty" class="form-input" value="100" min="1" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand MRP ($) *</label>
+            <input type="number" step="0.1" id="add-med-brand-price" class="form-input" value="15.00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Generic Price ($) *</label>
+            <input type="number" step="0.1" id="add-med-generic-price" class="form-input" value="3.00" required>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 0.5rem;">
+          <label class="form-label">Vernacular Voice Dosage Advice (Hindi)</label>
+          <input type="text" id="add-med-hi" class="form-input" placeholder="e.g. सुबह और रात को भोजन के बाद 1 गोली लें">
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+          <button type="submit" class="btn-ai-generate" style="flex: 1; justify-content: center;">
+            Save to Pharmacy Inventory
+          </button>
+          <button type="button" class="btn-secondary" onclick="closeAddMedicineModal()">
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

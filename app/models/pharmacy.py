@@ -42,3 +42,4 @@ class DispenseOrder(Base):
     cryptographic_lock = Column(String(64), nullable=True) # Locks prescription against double dispensing
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     dispensed_at = Column(DateTime, nullable=True)
+

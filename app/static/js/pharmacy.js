@@ -1,4 +1,4 @@
-// HealthSlip AI - Urban & Rural Medical Store (Pharmacy) Controller with Real-Time WebSockets
+// HealthSlip AI - Real-World Medical Store & Clinical Pharmacy POS Controller
 
 let currentStoreMode = 'URBAN'; // 'URBAN' or 'RURAL'
 let realtimeSocket = null;
@@ -6,6 +6,9 @@ let realtimeReconnectTimer = null;
 let unreadPrescriptionsCount = 0;
 let cachedQueue = [];
 let cachedInventory = [];
+let activeQueueFilter = 'ALL'; // 'ALL', 'PENDING', 'DISPENSED'
+let currentSearchTerm = '';
+let currentInventorySearchTerm = '';
 
 document.addEventListener('DOMContentLoaded', () => {
   initRealtimeWebSocket();
@@ -25,9 +28,8 @@ function initRealtimeWebSocket() {
     realtimeSocket = new WebSocket(wsUrl);
 
     realtimeSocket.onopen = () => {
-      console.log('[WebSocket] Connected to HealthSlip AI Real-Time Channel');
+      console.log('[WebSocket] Connected to HealthSlip AI Medical Store Real-Time Channel');
       updateRealtimeBadge(true);
-      // Flush any queued offline dispenses
       syncOfflineQueue();
     };
 
@@ -73,11 +75,11 @@ function updateRealtimeBadge(isConnected) {
     if (isConnected) {
       badgeEl.className = 'realtime-status-pill online';
       dotEl.className = 'status-pulse-dot green';
-      textEl.textContent = 'Live Sync: Active';
+      textEl.textContent = 'Counter Live: Connected';
     } else {
       badgeEl.className = 'realtime-status-pill offline';
       dotEl.className = 'status-pulse-dot red';
-      textEl.textContent = navigator.onLine ? 'Connecting...' : 'Offline (Local Queue)';
+      textEl.textContent = navigator.onLine ? 'Reconnecting...' : 'Offline (Local Queue)';
     }
   }
 }
@@ -115,7 +117,7 @@ function onNewPrescriptionReceived(data) {
   unreadPrescriptionsCount++;
   updateNavbarBadge();
 
-  showToast(`🔔 New Prescription: ${data.slip_number} for ${data.patient_name} ($${data.grand_total.toFixed(2)})`, 'success');
+  showToast(`🔔 New Rx ${data.slip_number} for ${data.patient_name} ($${data.grand_total.toFixed(2)})`, 'success');
 
   // Prepend to live queue
   const newEntry = {
@@ -131,8 +133,8 @@ function onNewPrescriptionReceived(data) {
     cryptographic_lock: null,
     store_type: currentStoreMode,
     is_generic_substituted: false,
-    generic_savings: 15.0,
-    savings_percent: 78.5,
+    generic_savings: 14.7,
+    savings_percent: 79.5,
     items_count: data.items_count,
     items: [],
     substitutions: []
@@ -143,8 +145,7 @@ function onNewPrescriptionReceived(data) {
 }
 
 function onPrescriptionDispensed(data) {
-  showToast(`✅ Prescription ${data.slip_number} dispensed at ${data.store_type} Store!`, 'info');
-  // Update in cached queue
+  showToast(`✅ Rx ${data.slip_number} dispensed at ${data.store_type} Store!`, 'info');
   const found = cachedQueue.find(q => q.slip_number === data.slip_number);
   if (found) {
     found.status = 'DISPENSED';
@@ -160,6 +161,9 @@ function onStockUpdated(data) {
     stockItem.stock_quantity = data.new_stock;
     stockItem.status = data.is_low_stock ? 'LOW_STOCK' : 'IN_STOCK';
     renderInventoryTable();
+  } else {
+    // If newly added item
+    loadPharmacyData();
   }
 }
 
@@ -175,7 +179,6 @@ function updateNavbarBadge() {
   }
 }
 
-// Web Audio API synthesized notification sound (zero external mp3 dependency)
 function playNotificationSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -183,10 +186,10 @@ function playNotificationSound() {
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-    osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.12); // A5
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.12);
 
-    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
 
     osc.connect(gain);
@@ -195,18 +198,17 @@ function playNotificationSound() {
     osc.start();
     osc.stop(ctx.currentTime + 0.36);
   } catch (e) {
-    // AudioContext might be restricted until user interaction
+    // Audio restricted before user gesture
   }
 }
 
 // ==============================================================
-// 2. URBAN VS RURAL MODE TOGGLING
+// 2. STORE MODE SWITCHER
 // ==============================================================
 
 function setStoreMode(mode) {
   currentStoreMode = mode;
 
-  // Toggle UI buttons
   const btnUrban = document.getElementById('btn-mode-urban');
   const btnRural = document.getElementById('btn-mode-rural');
   if (btnUrban && btnRural) {
@@ -219,12 +221,11 @@ function setStoreMode(mode) {
     }
   }
 
-  // Toggle contextual banner
   const bannerUrban = document.getElementById('banner-urban-mode');
   const bannerRural = document.getElementById('banner-rural-mode');
   if (bannerUrban && bannerRural) {
-    bannerUrban.style.display = mode === 'URBAN' ? 'block' : 'none';
-    bannerRural.style.display = mode === 'RURAL' ? 'block' : 'none';
+    bannerUrban.style.display = mode === 'URBAN' ? 'flex' : 'none';
+    bannerRural.style.display = mode === 'RURAL' ? 'flex' : 'none';
   }
 
   renderPharmacyQueue();
@@ -236,12 +237,10 @@ function setStoreMode(mode) {
 
 async function loadPharmacyData() {
   try {
-    // 1. Fetch queue
     const queueRes = await API.getPharmacyQueue(currentStoreMode);
     cachedQueue = queueRes.queue || [];
     renderPharmacyQueue();
 
-    // 2. Fetch inventory
     const invRes = await API.getPharmacyInventory();
     cachedInventory = invRes.items || [];
     renderInventoryTable();
@@ -251,46 +250,100 @@ async function loadPharmacyData() {
   }
 }
 
+function applyQueueFilter(filterType) {
+  activeQueueFilter = filterType;
+  document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+  if (filterType === 'ALL') document.getElementById('filter-all-btn')?.classList.add('active');
+  if (filterType === 'PENDING') document.getElementById('filter-pending-btn')?.classList.add('active');
+  if (filterType === 'DISPENSED') document.getElementById('filter-dispensed-btn')?.classList.add('active');
+  renderPharmacyQueue();
+}
+
+function filterPharmacyQueue() {
+  const input = document.getElementById('pharmacy-search-input');
+  currentSearchTerm = (input ? input.value : '').trim().toLowerCase();
+  renderPharmacyQueue();
+}
+
+function loadSlipByBarcode() {
+  const input = document.getElementById('barcode-slip-input');
+  const slipNo = (input ? input.value : '').trim().toUpperCase();
+  if (!slipNo) {
+    showToast('Please enter or scan a valid Slip ID (e.g. HSL-2026-94670)', 'warning');
+    return;
+  }
+
+  const found = cachedQueue.find(q => q.slip_number.toUpperCase() === slipNo);
+  if (found) {
+    showToast(`Rx ${slipNo} found! Loaded to dispensing counter.`, 'success');
+    if (input) input.value = '';
+    // Scroll to the card
+    const searchInput = document.getElementById('pharmacy-search-input');
+    if (searchInput) searchInput.value = slipNo;
+    filterPharmacyQueue();
+  } else {
+    showToast(`Prescription ${slipNo} not found in current counter queue.`, 'error');
+  }
+}
+
 function renderPharmacyQueue() {
   const container = document.getElementById('pharmacy-queue-list');
+  const countEl = document.getElementById('queue-visible-count');
   if (!container) return;
 
-  if (cachedQueue.length === 0) {
+  // Filter items based on active status filter and search term
+  let filtered = cachedQueue.filter(item => {
+    // Status filter
+    if (activeQueueFilter === 'PENDING' && item.status === 'DISPENSED') return false;
+    if (activeQueueFilter === 'DISPENSED' && item.status !== 'DISPENSED') return false;
+
+    // Search filter
+    if (currentSearchTerm) {
+      const matchSlip = item.slip_number.toLowerCase().includes(currentSearchTerm);
+      const matchPatient = (item.patient_name || '').toLowerCase().includes(currentSearchTerm);
+      const matchPhone = (item.patient_phone || '').includes(currentSearchTerm);
+      const matchDoc = (item.doctor_name || '').toLowerCase().includes(currentSearchTerm);
+      const matchDiag = (item.diagnosis || '').toLowerCase().includes(currentSearchTerm);
+      const matchItem = (item.items || []).some(it => (it.item_name || '').toLowerCase().includes(currentSearchTerm));
+      return matchSlip || matchPatient || matchPhone || matchDoc || matchDiag || matchItem;
+    }
+    return true;
+  });
+
+  if (countEl) countEl.textContent = filtered.length;
+
+  if (filtered.length === 0) {
     container.innerHTML = `
       <div class="empty-state-card">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
           <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
         </svg>
-        <h4>No Pending Prescriptions</h4>
-        <p>When a doctor issues a clinical health slip, it will arrive here live in real time!</p>
+        <h4>No Prescriptions Found</h4>
+        <p>No matching prescriptions in counter queue. Use the Doctor Slip Builder to issue new clinical prescriptions!</p>
       </div>
     `;
     return;
   }
 
-  container.innerHTML = cachedQueue.map(item => {
+  container.innerHTML = filtered.map(item => {
     const isDispensed = item.status === 'DISPENSED';
-    const isLocked = item.is_locked;
     const isRural = currentStoreMode === 'RURAL';
 
-    // Build items display
     const itemsHtml = (item.items || []).map(it => `
       <div class="queue-item-row">
         <span>💊 <strong>${escapeHtml(it.item_name)}</strong> (x${it.quantity})</span>
-        <span>$${it.total_price.toFixed(2)}</span>
+        <span style="font-weight: 600;">$${it.total_price.toFixed(2)}</span>
       </div>
     `).join('');
 
-    // Generic drug savings highlight for rural mode
     const savingsHtml = (isRural && item.generic_savings > 0) ? `
       <div class="generic-savings-badge">
         <div class="savings-tag">🌾 Jan Aushadhi Generic Savings</div>
-        <div class="savings-amount">Save $${item.generic_savings.toFixed(2)} (${item.savings_percent}% Cheaper)</div>
-        <div class="savings-subtext">Government-certified bio-equivalent generic salts available for this prescription.</div>
+        <div class="savings-amount">Patient Saves $${item.generic_savings.toFixed(2)} (${item.savings_percent}% Cheaper)</div>
+        <div class="savings-subtext">Certified bio-equivalent generic salts available for this prescription.</div>
       </div>
     ` : '';
 
-    // Action buttons depending on mode and status
     let actionButtons = '';
     if (isDispensed) {
       actionButtons = `
@@ -298,6 +351,14 @@ function renderPharmacyQueue() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
           DISPENSED & CRYPTOGRAPHICALLY LOCKED
           <span class="lock-hash-preview" title="${item.cryptographic_lock || ''}">${(item.cryptographic_lock || '').substring(0, 16)}...</span>
+        </div>
+        <div class="queue-actions-row" style="margin-top: 0.6rem;">
+          <button class="btn-pharmacy-memo" onclick="openPharmacyInvoiceModal('${item.slip_number}')">
+            🧾 View Pharmacy Cash Memo / Invoice
+          </button>
+          <button class="btn-pharmacy-audio" onclick="playAudioDosage('${item.slip_number}')" title="Play Voice Dosage">
+            🔊 Voice Explainer
+          </button>
         </div>
       `;
     } else {
@@ -313,13 +374,17 @@ function renderPharmacyQueue() {
             </button>
           `}
           
+          <button class="btn-pharmacy-memo" onclick="openPharmacyInvoiceModal('${item.slip_number}')" title="Preview Pharmacy Cash Memo">
+            🧾 Cash Memo
+          </button>
+
           <button class="btn-pharmacy-audio" onclick="playAudioDosage('${item.slip_number}')" title="Play Voice Dosage for Patient">
-            🔊 Voice Explainer
+            🔊 Voice
           </button>
 
           ${isRural ? `
             <button class="btn-pharmacy-sms" onclick="generateRuralSms('${item.slip_number}')" title="Copy SMS for 2G Keypad Phones">
-              📱 2G SMS Slip
+              📱 2G SMS
             </button>
           ` : ''}
         </div>
@@ -340,7 +405,7 @@ function renderPharmacyQueue() {
           </div>
           <div class="card-header-right">
             <span class="status-badge ${isDispensed ? 'status-dispensed' : 'status-pending'}">
-              ${isDispensed ? 'COMPLETED' : 'AWAITING DISPENSE'}
+              ${isDispensed ? 'DISPENSED' : 'READY TO DISPENSE'}
             </span>
             <div class="card-total-price">$${item.grand_total.toFixed(2)}</div>
           </div>
@@ -358,11 +423,40 @@ function renderPharmacyQueue() {
   }).join('');
 }
 
+// ==============================================================
+// 4. INVENTORY MANAGEMENT & REAL-TIME SEARCH
+// ==============================================================
+
+function filterInventoryTable() {
+  const input = document.getElementById('inventory-search-input');
+  currentInventorySearchTerm = (input ? input.value : '').trim().toLowerCase();
+  renderInventoryTable();
+}
+
 function renderInventoryTable() {
   const tbody = document.getElementById('pharmacy-inventory-tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = cachedInventory.map(item => {
+  let filtered = cachedInventory.filter(item => {
+    if (!currentInventorySearchTerm) return true;
+    const matchBrand = (item.brand_name || '').toLowerCase().includes(currentInventorySearchTerm);
+    const matchGeneric = (item.generic_name || '').toLowerCase().includes(currentInventorySearchTerm);
+    const matchBatch = (item.batch_number || '').toLowerCase().includes(currentInventorySearchTerm);
+    return matchBrand || matchGeneric || matchBatch;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+          No medicine batches found matching "${escapeHtml(currentInventorySearchTerm)}".
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(item => {
     const isLow = item.status === 'LOW_STOCK';
     const isOut = item.status === 'OUT_OF_STOCK';
 
@@ -379,19 +473,22 @@ function renderInventoryTable() {
     return `
       <tr>
         <td>
-          <strong>${escapeHtml(item.brand_name)}</strong>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(item.generic_name)}</div>
+          <strong style="color: var(--text-main); font-size: 0.82rem;">${escapeHtml(item.brand_name)}</strong>
+          <div style="font-size: 0.72rem; color: var(--primary); font-weight: 500;">${escapeHtml(item.generic_name)}</div>
         </td>
-        <td><code style="font-size: 0.75rem;">${escapeHtml(item.batch_number)}</code></td>
+        <td>
+          <code style="font-size: 0.72rem; background: #f1f5f9; padding: 2px 4px; border-radius: 4px;">${escapeHtml(item.batch_number)}</code>
+          <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 2px;">Exp: 11/2027</div>
+        </td>
         <td>
           <span class="stock-pill ${badgeClass}">
             ${item.stock_quantity} units
           </span>
-          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Min: ${item.reorder_level}</div>
+          <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">Min: ${item.reorder_level}</div>
         </td>
         <td>
-          <div style="font-weight: 600;">$${item.unit_price_brand.toFixed(2)}</div>
-          <div style="font-size: 0.75rem; color: var(--success); font-weight: 500;">
+          <div style="font-weight: 600; font-size: 0.8rem;">$${item.unit_price_brand.toFixed(2)}</div>
+          <div style="font-size: 0.72rem; color: var(--emerald-text); font-weight: 600;">
             Generic: $${item.unit_price_generic.toFixed(2)} (${item.savings_percent}% off)
           </div>
         </td>
@@ -411,8 +508,145 @@ function updateInventoryMetrics(invRes) {
   if (lowEl) lowEl.textContent = invRes.low_stock_count;
 }
 
+// Add New Medicine Batch Modal Handlers
+function openAddMedicineModal() {
+  const modal = document.getElementById('add-medicine-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAddMedicineModal() {
+  const modal = document.getElementById('add-medicine-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function submitNewMedicine(event) {
+  event.preventDefault();
+  const brand = document.getElementById('add-med-brand').value;
+  const generic = document.getElementById('add-med-generic').value;
+  const form = document.getElementById('add-med-form').value;
+  const strength = document.getElementById('add-med-strength').value || '500mg';
+  const batch = document.getElementById('add-med-batch').value;
+  const qty = parseInt(document.getElementById('add-med-qty').value, 10);
+  const brandPrice = parseFloat(document.getElementById('add-med-brand-price').value);
+  const genericPrice = parseFloat(document.getElementById('add-med-generic-price').value);
+  const hi = document.getElementById('add-med-hi').value;
+
+  try {
+    const payload = {
+      brand_name: brand,
+      generic_name: generic,
+      dosage_form: form,
+      strength: strength,
+      batch_number: batch,
+      stock_quantity: qty,
+      reorder_level: 15,
+      unit_price_brand: brandPrice,
+      unit_price_generic: genericPrice,
+      vernacular_dosage_hi: hi || "भोजन के बाद पानी के साथ लें",
+      vernacular_dosage_en: "Take after meals with water",
+      visual_timing: "AFTER_MEAL"
+    };
+
+    const res = await API.addMedicine(payload);
+    if (res.success) {
+      showToast(`Medicine batch ${batch} added to inventory successfully!`, 'success');
+      closeAddMedicineModal();
+      document.getElementById('add-medicine-form').reset();
+      loadPharmacyData();
+    }
+  } catch (err) {
+    showToast(`Error adding medicine: ${err.message}`, 'error');
+  }
+}
+
 // ==============================================================
-// 4. PHARMACY ACTIONS: DISPENSE & ANTI-DOUBLE DISPENSING LOCK
+// 5. OFFICIAL MEDICAL STORE THERMAL CASH MEMO MODAL
+// ==============================================================
+
+async function openPharmacyInvoiceModal(slipNumber) {
+  try {
+    const bill = await API.getPharmacyBill(slipNumber);
+    const modal = document.getElementById('pharmacy-invoice-modal');
+    if (!modal) return;
+
+    // Header info
+    document.getElementById('memo-store-name').textContent = bill.store_info.name;
+    document.getElementById('memo-store-sub').innerHTML = `
+      ${bill.store_info.dl_number} • GSTIN: ${bill.store_info.gstin}<br>
+      ${bill.store_info.address} • ${bill.store_info.pharmacist}
+    `;
+
+    // Meta details
+    document.getElementById('memo-meta-details').innerHTML = `
+      <div><strong>Inv #:</strong> ${bill.invoice_number}</div>
+      <div><strong>Date:</strong> ${bill.date}</div>
+      <div><strong>Patient:</strong> ${escapeHtml(bill.patient.name)} (${bill.patient.age}/${bill.patient.gender})</div>
+      <div><strong>Phone:</strong> ${escapeHtml(bill.patient.phone)}</div>
+      <div><strong>Doctor:</strong> ${escapeHtml(bill.doctor.name)}</div>
+      <div><strong>Lic #:</strong> ${escapeHtml(bill.doctor.license)}</div>
+    `;
+
+    // Table items
+    const tbody = document.getElementById('memo-items-tbody');
+    tbody.innerHTML = bill.items.map(it => `
+      <tr>
+        <td>
+          <strong>${escapeHtml(it.name)}</strong>
+          ${it.savings > 0 ? `<div style="font-size: 0.65rem; color: #15803d; font-weight: 600;">Jan Aushadhi Generic</div>` : ''}
+        </td>
+        <td><code>${escapeHtml(it.batch)}</code></td>
+        <td style="text-align: center;">${it.quantity}</td>
+        <td>$${it.unit_price.toFixed(2)}</td>
+        <td style="font-weight: 700;">$${it.total_price.toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    // Totals
+    document.getElementById('memo-totals-section').innerHTML = `
+      <div class="thermal-totals-row">
+        <span>MRP Value:</span>
+        <span>$${bill.financials.mrp_total.toFixed(2)}</span>
+      </div>
+      ${bill.financials.jan_aushadhi_savings > 0 ? `
+        <div class="thermal-totals-row savings">
+          <span>Jan Aushadhi Generic Savings:</span>
+          <span>-$${bill.financials.jan_aushadhi_savings.toFixed(2)}</span>
+        </div>
+      ` : ''}
+      <div class="thermal-totals-row">
+        <span>Taxable Subtotal:</span>
+        <span>$${bill.financials.subtotal.toFixed(2)}</span>
+      </div>
+      <div class="thermal-totals-row">
+        <span>GST (${bill.financials.tax_rate}%):</span>
+        <span>$${bill.financials.tax_amount.toFixed(2)}</span>
+      </div>
+      <div class="thermal-totals-row grand">
+        <span>NET PAYABLE:</span>
+        <span>$${bill.financials.grand_total.toFixed(2)}</span>
+      </div>
+    `;
+
+    // Seal box
+    document.getElementById('memo-seal-box').innerHTML = `
+      <div class="seal-hash-title">HMAC-SHA256 Cryptographic Dispense Seal:</div>
+      <div class="seal-hash-text">${bill.cryptographic_seal}</div>
+      <div class="seal-verify-note">Verified & Registered on HealthSlip AI Pharmacy Network</div>
+    `;
+
+    modal.style.display = 'flex';
+  } catch (err) {
+    showToast(`Error loading pharmacy bill: ${err.message}`, 'error');
+  }
+}
+
+function closePharmacyInvoiceModal() {
+  const modal = document.getElementById('pharmacy-invoice-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+// ==============================================================
+// 6. PHARMACY ACTIONS: DISPENSE & ANTI-DOUBLE DISPENSING LOCK
 // ==============================================================
 
 async function dispenseRx(slipNumber, isGeneric) {
@@ -421,7 +655,6 @@ async function dispenseRx(slipNumber, isGeneric) {
       ? 'Rural Seva Health Pharmacist' 
       : 'Urban Medical Store Dispenser';
 
-    // Check if offline
     if (!navigator.onLine) {
       queueOfflineDispense(slipNumber, isGeneric, pharmacistName);
       return;
@@ -437,8 +670,10 @@ async function dispenseRx(slipNumber, isGeneric) {
 
     const res = await API.dispensePrescription(payload);
     if (res.success) {
-      showToast(`Prescription ${slipNumber} DISPENSED & SEALED cryptographically!`, 'success');
+      showToast(`Prescription ${slipNumber} DISPENSED & SEALED!`, 'success');
       loadPharmacyData();
+      // Open thermal memo immediately for printing
+      openPharmacyInvoiceModal(slipNumber);
     }
   } catch (err) {
     showToast(`Dispense error: ${err.message}`, 'error');
@@ -465,29 +700,25 @@ async function adjustMedicineStock(medicineId, amount) {
 }
 
 // ==============================================================
-// 5. VERNACULAR AUDIO DOSAGE & MULTILINGUAL TTS
+// 7. VERNACULAR AUDIO DOSAGE & MULTILINGUAL TTS
 // ==============================================================
 
 async function playAudioDosage(slipNumber) {
   const item = cachedQueue.find(q => q.slip_number === slipNumber);
   const medName = (item && item.items && item.items[0]) ? item.items[0].item_name : 'Ibuprofen';
-
-  // Ask language preference (Hindi for rural vernacular, or English)
   const lang = (currentStoreMode === 'RURAL') ? 'hi' : 'en';
 
   try {
     const res = await API.getAudioDosageScript(medName, lang);
     const speechText = res.speech_text;
 
-    // Show modal or speech card
     showVoiceModal(res.medicine_name, speechText, res.timing_glyph, lang);
 
-    // Trigger Browser SpeechSynthesis
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // Stop any previous speech
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(speechText);
       utterance.lang = lang === 'hi' ? 'hi-IN' : 'en-US';
-      utterance.rate = 0.9; // Speak clearly for rural patients
+      utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     }
   } catch (err) {
@@ -557,7 +788,7 @@ function closeVoiceModal() {
 }
 
 // ==============================================================
-// 6. RURAL 2G KEYPAD PHONE SMS GENERATOR
+// 8. RURAL 2G KEYPAD PHONE SMS GENERATOR
 // ==============================================================
 
 async function generateRuralSms(slipNumber) {
@@ -565,7 +796,6 @@ async function generateRuralSms(slipNumber) {
     const res = await API.getRuralSmsSlip(slipNumber);
     const smsContent = res.sms_content;
 
-    // Copy to clipboard
     navigator.clipboard.writeText(smsContent);
     showToast(`📋 Copied 2G SMS Slip (${res.char_count} chars): "${smsContent}"`, 'success');
   } catch (err) {
@@ -574,7 +804,7 @@ async function generateRuralSms(slipNumber) {
 }
 
 // ==============================================================
-// 7. OFFLINE-FIRST SYNCHRONIZATION (RURAL LOW-BANDWIDTH)
+// 9. OFFLINE-FIRST SYNCHRONIZATION (RURAL LOW-BANDWIDTH)
 // ==============================================================
 
 function initNetworkListeners() {
@@ -603,7 +833,6 @@ function queueOfflineDispense(slipNumber, isGeneric, pharmacistName) {
 
   showToast(`⚠️ Stored offline! Prescription ${slipNumber} will sync automatically when online.`, 'warning');
 
-  // Mark locally as dispensed
   const found = cachedQueue.find(q => q.slip_number === slipNumber);
   if (found) {
     found.status = 'DISPENSED';

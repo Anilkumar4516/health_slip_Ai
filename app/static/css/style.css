@@ -2,46 +2,61 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-light: #eff6ff;
+  /* Natural Medical Production Palette - Clinical Teal & Healing Slate */
+  --primary: #0d7a68;
+  --primary-hover: #0a6354;
+  --primary-dark: #084e42;
+  --primary-light: #f0fdfa;
+  --primary-subtle: #ccfbf1;
+  --primary-border: #99f6e4;
+  
   --navy: #1e293b;
   --navy-dark: #0f172a;
   
-  --amber: #f59e0b;
-  --amber-dark: #d97706;
-  --amber-light: #fef3c7;
-  --amber-pill: #fbbf24;
+  /* Clinical Pharmacy Amber (Warnings / Controlled Drugs) */
+  --amber: #d97706;
+  --amber-dark: #b45309;
+  --amber-light: #fffbeb;
+  --amber-pill: #f59e0b;
+  --amber-border: #fde68a;
   
-  --emerald: #10b981;
-  --emerald-light: #ecfdf5;
-  --emerald-text: #047857;
+  /* Jan Aushadhi & Verified Dispense Emerald */
+  --emerald: #15803d;
+  --emerald-light: #f0fdf4;
+  --emerald-text: #166534;
+  --emerald-border: #bbf7d0;
   
-  --rose: #ef4444;
+  /* Contraindication & Danger Alert */
+  --rose: #dc2626;
   --rose-light: #fef2f2;
+  --rose-border: #fecaca;
   
-  --bg-gradient: linear-gradient(135deg, #eef2f9 0%, #e2e8f5 50%, #e8edf7 100%);
+  /* Clean Hospital & Pharmacy Workspace Canvas */
+  --bg-gradient: #f8fafc;
   --surface: #ffffff;
-  --surface-alt: #f8fafc;
+  --surface-alt: #f1f5f9;
   --border: #e2e8f0;
-  --border-light: rgba(255, 255, 255, 0.6);
+  --border-dark: #cbd5e1;
+  --border-light: rgba(255, 255, 255, 0.8);
   
-  --text-main: #1e293b;
-  --text-muted: #64748b;
+  /* High Legibility Clinical Typography */
+  --text-main: #0f172a;
+  --text-muted: #475569;
   --text-dim: #94a3b8;
   
-  --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.06);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.08);
-  --shadow-pill: 0 4px 12px rgba(37, 99, 235, 0.15);
+  /* Soft Medical SaaS Shadows */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 28px -4px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.03);
+  --shadow-pill: 0 2px 8px rgba(13, 122, 104, 0.18);
   
   --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 30px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
   --radius-pill: 9999px;
   
-  --transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -85,7 +100,7 @@ body {
 .brand-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #084e42 100%);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -346,7 +361,7 @@ body {
   position: relative;
   overflow: hidden;
   margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #0d7a68 0%, #115e59 100%);
   color: white;
   padding: 1.25rem;
   box-shadow: var(--shadow-md);
@@ -373,7 +388,7 @@ body {
 
 .phone-hero-card p {
   font-size: 0.75rem;
-  color: #bfdbfe;
+  color: #ccfbf1;
   margin-bottom: 0.85rem;
   line-height: 1.35;
   position: relative;
@@ -382,7 +397,7 @@ body {
 
 .btn-scan-action {
   width: 100%;
-  background: #1e3a8a;
+  background: #084e42;
   border: 1.5px solid rgba(255, 255, 255, 0.2);
   color: white;
   font-weight: 700;
@@ -648,13 +663,13 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #084e42 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   margin-top: -16px;
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 6px 16px rgba(13, 122, 104, 0.35);
   border: 3px solid white;
   cursor: pointer;
   transition: var(--transition);
@@ -766,12 +781,12 @@ body {
 
 .ai-textarea:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(13, 122, 104, 0.12);
 }
 
 .btn-ai-generate {
   align-self: flex-start;
-  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #084e42 100%);
   color: white;
   font-weight: 700;
   font-size: 0.85rem;
@@ -1234,7 +1249,7 @@ body {
 .user-profile-badge:hover {
   border-color: var(--primary);
   background: #f8fafc;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 4px 12px rgba(13, 122, 104, 0.12);
 }
 
 .user-live-indicator {
@@ -1256,7 +1271,7 @@ body {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #084e42 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -1342,7 +1357,7 @@ body {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #084e42 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -1718,7 +1733,7 @@ body {
 }
 
 .app-toast.toast-info {
-  border-left: 4px solid #2563eb;
+  border-left: 4px solid var(--primary);
 }
 
 .app-toast.toast-warning {
@@ -1919,7 +1934,7 @@ body {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--primary);
   animation: pulseGreen 1.6s infinite;
 }
 
@@ -2083,7 +2098,7 @@ body {
 
 .btn-pharmacy-dispense {
   flex: 1;
-  background: #2563eb;
+  background: var(--primary);
   color: white;
   border: none;
   padding: 0.5rem 0.85rem;
@@ -2095,7 +2110,7 @@ body {
 }
 
 .btn-pharmacy-dispense:hover {
-  background: #1d4ed8;
+  background: var(--primary-hover);
 }
 
 .btn-pharmacy-substitute {
@@ -2388,5 +2403,429 @@ body {
 .btn-voice-close:hover {
   background: #e2e8f0;
 }
+
+/* ==============================================================
+   REAL-WORLD MEDICAL STORE & PHARMACY POS STYLING
+   ============================================================== */
+
+/* Pharmacy Store Identity & License Bar */
+.pharmacy-store-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.store-meta-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.store-meta-icon {
+  font-size: 2rem;
+  background: var(--primary-light);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--primary-border);
+}
+
+.store-meta-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.store-meta-sub {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.store-meta-sub strong {
+  color: var(--text-main);
+}
+
+.store-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Search, Barcode & Filter Bar */
+.pharmacy-search-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrapper svg {
+  position: absolute;
+  left: 12px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.search-input-wrapper input {
+  width: 100%;
+  padding: 0.6rem 0.85rem 0.6rem 2.25rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-family: inherit;
+  outline: none;
+  background: white;
+  transition: var(--transition);
+}
+
+.search-input-wrapper input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(13, 122, 104, 0.12);
+}
+
+.barcode-quick-loader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 2px 4px 2px 10px;
+}
+
+.barcode-quick-loader svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.barcode-quick-loader input {
+  border: none;
+  outline: none;
+  font-size: 0.8rem;
+  font-family: inherit;
+  width: 100%;
+}
+
+.btn-barcode-load {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.45rem 0.85rem;
+  border-radius: calc(var(--radius-md) - 2px);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+
+.btn-barcode-load:hover {
+  background: var(--primary-hover);
+}
+
+.queue-filter-pills {
+  display: flex;
+  gap: 4px;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+}
+
+.filter-pill {
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.filter-pill.active {
+  background: white;
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-pill:hover:not(.active) {
+  color: var(--text-main);
+}
+
+.btn-pharmacy-memo {
+  background: #f0fdfa;
+  border: 1px solid var(--primary-border);
+  color: var(--primary);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-pharmacy-memo:hover {
+  background: #ccfbf1;
+}
+
+.btn-add-stock-trigger {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-add-stock-trigger:hover {
+  background: var(--primary-hover);
+}
+
+.inventory-search-row {
+  margin: 0.65rem 0;
+}
+
+.inventory-search-row input {
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.inventory-search-row input:focus {
+  border-color: var(--primary);
+}
+
+/* Official Thermal Cash Memo / Invoice Modal */
+.thermal-memo-dialog {
+  max-width: 480px;
+  background: #ffffff;
+  padding: 1.5rem;
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+  color: #0f172a;
+}
+
+.thermal-memo-header {
+  text-align: center;
+  position: relative;
+}
+
+.thermal-store-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.thermal-store-sub {
+  font-size: 0.68rem;
+  color: #475569;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.thermal-divider {
+  border-top: 1px dashed #cbd5e1;
+  margin: 0.75rem 0;
+}
+
+.thermal-title-tag {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #0f172a;
+  background: #f1f5f9;
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+}
+
+.thermal-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  font-size: 0.7rem;
+  color: #334155;
+  margin-top: 0.5rem;
+}
+
+.thermal-table-wrapper {
+  margin: 0.5rem 0;
+}
+
+.thermal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.thermal-table th {
+  text-align: left;
+  border-bottom: 1px solid #0f172a;
+  padding: 4px 2px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.thermal-table td {
+  padding: 5px 2px;
+  border-bottom: 1px dashed #e2e8f0;
+  vertical-align: top;
+}
+
+.thermal-totals-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.thermal-totals-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.thermal-totals-row.savings {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.thermal-totals-row.grand {
+  font-size: 0.95rem;
+  font-weight: 800;
+  border-top: 1px solid #0f172a;
+  border-bottom: 1px solid #0f172a;
+  padding: 4px 0;
+  margin-top: 4px;
+}
+
+.thermal-seal-box {
+  background: #f8fafc;
+  border: 1px dashed #94a3b8;
+  border-radius: 6px;
+  padding: 0.5rem;
+  margin: 0.75rem 0;
+  text-align: center;
+}
+
+.seal-hash-title {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.seal-hash-text {
+  font-size: 0.65rem;
+  color: var(--primary);
+  word-break: break-all;
+  font-weight: 600;
+  margin: 2px 0;
+}
+
+.seal-verify-note {
+  font-size: 0.62rem;
+  color: #15803d;
+  font-weight: 600;
+}
+
+.thermal-actions-bar {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.btn-thermal-print {
+  flex: 1;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.6rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-thermal-print:hover {
+  background: var(--primary-hover);
+}
+
+.btn-thermal-close {
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Modal Form Grid Helpers */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #pharmacy-invoice-modal,
+  #pharmacy-invoice-modal .custom-modal-dialog,
+  #pharmacy-invoice-modal .custom-modal-dialog * {
+    visibility: visible;
+  }
+  #pharmacy-invoice-modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: transparent;
+    display: block !important;
+  }
+  .thermal-actions-bar,
+  .modal-close-btn {
+    display: none !important;
+  }
+}
+
 
 

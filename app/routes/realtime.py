@@ -47,3 +47,4 @@ def get_realtime_status():
         "status": "online",
         "active_clients": len(ws_manager.active_connections)
     }
+

@@ -23,3 +23,20 @@ class AudioDosageRequest(BaseModel):
 class RuralSmsRequest(BaseModel):
     slip_number: str
     patient_phone: Optional[str] = None
+
+class AddMedicineStockRequest(BaseModel):
+    brand_name: str = Field(..., description="Brand or trade name e.g. Augmentin 625mg")
+    generic_name: str = Field(..., description="Chemical or generic salt name")
+    dosage_form: str = Field("Tablet", description="Tablet, Capsule, Syrup, etc.")
+    strength: str = Field("500mg", description="Dosage strength e.g. 500mg, 625mg")
+    batch_number: str = Field(..., description="Manufacturing batch number e.g. B-2026-901")
+    stock_quantity: int = Field(50, description="Initial stock quantity")
+    reorder_level: int = Field(15, description="Low stock warning threshold")
+    unit_price_brand: float = Field(10.0, description="Branded market price")
+    unit_price_generic: float = Field(2.0, description="Jan Aushadhi government generic price")
+    vernacular_dosage_hi: Optional[str] = "भोजन के बाद पानी के साथ लें"
+    vernacular_dosage_en: Optional[str] = "Take after meals with water"
+    visual_timing: str = "AFTER_MEAL"
+    is_controlled: bool = False
+
+

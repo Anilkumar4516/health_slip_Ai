@@ -217,5 +217,13 @@ const API = {
       medicine_id: medicineId,
       quantity_change: quantityChange
     });
+  },
+
+  async addMedicine(payload) {
+    return this.post('/api/pharmacy/inventory/add', payload);
+  },
+
+  async getPharmacyBill(slipNumber) {
+    return this.get(`/api/pharmacy/bill/${encodeURIComponent(slipNumber)}`);
   }
 };
