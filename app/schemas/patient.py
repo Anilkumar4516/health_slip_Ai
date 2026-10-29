@@ -25,20 +25,21 @@ class PatientSummary(BaseModel):
     uuid: str
     full_name: str
     first_name: str
-    last_name: str
+    last_name: str = ""
     phone: str
-    email: Optional[str]
-    age: int
-    gender: str
-    blood_group: str
-    city: Optional[str]
-    state: Optional[str]
-    postal_code: Optional[str]
-    created_at: datetime.datetime
+    email: Optional[str] = None
+    age: int = 28
+    gender: str = "Male"
+    blood_group: str = "O+"
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postal_code: Optional[str] = None
+    created_at: Optional[datetime.datetime] = None
 
 class PatientDetailResponse(PatientSummary):
-    address_line1: Optional[str]
-    emergency_contact_name: Optional[str]
-    emergency_contact_phone: Optional[str]
+    address_line1: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
     total_prescriptions: int = 0
     total_bills: int = 0
+

@@ -294,8 +294,34 @@ def test_pharmacy_dispense_and_anti_double_dispensing_lock():
 def test_rural_voice_and_sms_generation():
     # 1. Test Rural 2G SMS generator
     recent_receipts = client.get("/api/receipts").json()
-    assert len(recent_receipts) > 0
-    slip_no = recent_receipts[0]["slip_number"]
+    if not recent_receipts:
+        create_resp = client.post("/api/receipts", json={
+            "patient": {
+                "full_name": "Test Patient",
+                "age": 30,
+                "gender": "Male",
+                "phone": "+919876543200",
+                "email": "test.patient@example.com",
+                "blood_group": "O+",
+                "address": "Hyderabad"
+            },
+            "doctor_name": "Dr. Minh Nguyen, M.D.",
+            "doctor_license": "MED-2024-8841",
+            "clinic_name": "HealthSlip Medical",
+            "diagnosis": "General Health Checkup",
+            "symptoms": "Mild fatigue",
+            "items": [{
+                "item_type": "MEDICATION",
+                "item_name": "Crocin 650mg",
+                "unit_price": 50.0,
+                "quantity": 1,
+                "dosage": "1 pill",
+                "instructions": "Take after meals"
+            }]
+        })
+        slip_no = create_resp.json()["slip_number"]
+    else:
+        slip_no = recent_receipts[0]["slip_number"]
 
     sms_resp = client.post("/api/pharmacy/sms-slip", json={"slip_number": slip_no})
     assert sms_resp.status_code == 200
@@ -320,11 +346,13 @@ def test_rural_voice_and_sms_generation():
 
 def test_manual_patient_registration():
     # Test manual patient creation by doctor or medical store staff
+    import random
+    rand_suffix = random.randint(10000, 99999)
     payload = {
         "first_name": "Rajesh",
         "last_name": "Kumar",
-        "phone": "+919876543210",
-        "email": "rajesh.kumar@healthslip.test",
+        "phone": f"+91987{rand_suffix:05d}",
+        "email": f"rajesh.{rand_suffix}@healthslip.test",
         "age": 34,
         "gender": "Male",
         "blood_group": "B+",

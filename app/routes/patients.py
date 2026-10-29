@@ -25,15 +25,25 @@ def register_new_patient_manually(req: PatientManualCreate, request: Request, db
         raise HTTPException(status_code=400, detail="Invalid phone number provided.")
 
     # 1. Check or create User
-    user = db.query(User).filter(User.phone_number == clean_phone).first()
+    user = None
+    if req.email and req.email.strip():
+        user = db.query(User).filter((User.phone_number == clean_phone) | (User.email == req.email.strip())).first()
+    else:
+        user = db.query(User).filter(User.phone_number == clean_phone).first()
+
     first_name = req.first_name.strip()
     last_name = (req.last_name or "").strip()
 
     if not user:
-        email = req.email.strip() if req.email else f"{first_name.lower()}.{random.randint(100, 999)}@patient.healthslip.ai"
+        email_to_use = req.email.strip() if (req.email and req.email.strip()) else None
+        if email_to_use and db.query(User).filter(User.email == email_to_use).first():
+            email_to_use = f"{first_name.lower()}.{random.randint(1000, 9999)}@patient.healthslip.ai"
+        elif not email_to_use:
+            email_to_use = f"{first_name.lower()}.{random.randint(1000, 9999)}@patient.healthslip.ai"
+
         user = User(
             uuid=str(uuid.uuid4()),
-            email=email,
+            email=email_to_use,
             phone_number=clean_phone,
             password_hash=AuthService.hash_password("Patient@2026"),
             status="ACTIVE",
@@ -225,3 +235,4 @@ def get_patient_details(patient_id: int, db: Session = Depends(get_db)):
         total_prescriptions=len(patient.prescriptions) if patient.prescriptions else 0,
         total_bills=len(patient.bills) if patient.bills else 0
     )
+
