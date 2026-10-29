@@ -295,7 +295,7 @@ class GenericDrugService:
     def generate_rural_sms_slip(cls, patient_name: str, slip_number: str, items: List[Dict[str, Any]], total: float, is_generic: bool) -> str:
         """
         Generate lightweight SMS (GSM-7 compatible < 160 chars) for rural feature phones:
-        e.g., 'Rx HSL-2026-94670 for Minh: Ibuprofen(1-0-1 post meals). Total: $2.40 (JanAushadhi Saved 80%). Help: 1800-MED-CARE'
+        e.g., 'Rx HSL-2026-94670 for Minh: Ibuprofen(1-0-1 post meals). Total: ₹2.40 (JanAushadhi Saved 80%). Help: 1800-MED-CARE'
         """
         med_summaries = []
         for it in items[:2]:

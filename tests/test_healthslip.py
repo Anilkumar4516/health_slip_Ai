@@ -18,7 +18,7 @@ def test_health_check():
 
 def test_ai_clinical_parsing():
     req = AIExtractRequest(
-        clinical_notes="Patient Minh Nguyen, 28/M, presents with acute migraine. Prescribe Ibuprofen 400mg 1 pill after lunch for 5 days. Consultation fee $50.",
+        clinical_notes="Patient Minh Nguyen, 28/M, presents with acute migraine. Prescribe Ibuprofen 400mg 1 pill after lunch for 5 days. Consultation fee ₹500.",
         patient_name="Minh",
         patient_age=28,
         patient_gender="Male",

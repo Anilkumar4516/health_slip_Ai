@@ -96,7 +96,7 @@ class AIService:
                 }
             ]
         }
-        Always include a CONSULTATION line item ($50 standard if unspecified).
+        Always include a CONSULTATION line item (₹500 INR standard if unspecified).
         Ensure all medications mentioned have corresponding structured items and dosage reminder schedules.
         Respond ONLY with valid JSON.
         """

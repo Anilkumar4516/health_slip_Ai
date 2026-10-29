@@ -16,7 +16,7 @@ assert h.status_code == 200, f"Health failed: {h.text}"
 print("[1/16] /api/health: OK")
 
 # 2. AI Parse
-p = client.post("/api/receipts/ai-parse", json={"clinical_notes": "Prescribe Ibuprofen 400mg 1 tab morning for 5 days. Consultation $50."})
+p = client.post("/api/receipts/ai-parse", json={"clinical_notes": "Prescribe Ibuprofen 400mg 1 tab morning for 5 days. Consultation fee ₹500."})
 assert p.status_code == 200, f"AI Parse failed: {p.text}"
 print("[2/16] /api/receipts/ai-parse: OK")
 
@@ -82,7 +82,7 @@ print(f"[12/16] /api/reminders/{rem_id}/toggle: OK (is_done={is_done})")
 st = client.get("/api/stats")
 assert st.status_code == 200, f"Stats failed: {st.text}"
 rev = st.json()["total_revenue"]
-print(f"[13/16] /api/stats: OK (Total revenue ${rev})")
+print(f"[13/16] /api/stats: OK (Total revenue ₹{rev})")
 
 # 14. DB status
 db_st = client.get("/api/stats/db-status")
