@@ -55,9 +55,9 @@ class HealthSlipCreate(BaseModel):
     patient: PatientEmbeddedCreate
     
     # Doctor info
-    doctor_name: str = "Dr. Minh Nguyen, M.D."
-    doctor_license: str = "MED-2024-8841"
-    clinic_name: str = "HealthSlip AI Care & Diagnostics"
+    doctor_name: str = "Dr. K. S. Rao, M.B.B.S., M.D."
+    doctor_license: str = "TSMC-2024-8841"
+    clinic_name: str = "HealthSlip AI Multi-Specialty Clinic & Seva Kendra"
     
     # Clinical info
     symptoms: Optional[str] = None

@@ -28,16 +28,16 @@ class PDFService:
                 diagnosis=slip_input.get("diagnosis", "Clinical Consultation"),
                 symptoms=slip_input.get("symptoms", "General routine checkup"),
                 doctor=SimpleNamespace(
-                    name=slip_input.get("doctor_name", "Dr. Minh Nguyen, M.D."),
-                    clinic_name=slip_input.get("clinic_name", "HealthSlip AI Medical Center"),
-                    license_number="MED-2024-8841",
+                    name=slip_input.get("doctor_name", "Dr. K. S. Rao, M.B.B.S., M.D."),
+                    clinic_name=slip_input.get("clinic_name", "HealthSlip AI Multi-Specialty Clinic & Seva Kendra"),
+                    license_number="TSMC-2024-8841",
                     specialization="General & Internal Medicine"
                 ),
                 patient=SimpleNamespace(
-                    full_name=slip_input.get("patient_name", "Minh"),
+                    full_name=slip_input.get("patient_name", "Rajesh Kumar"),
                     age=slip_input.get("patient_age", 28),
                     gender=slip_input.get("patient_gender", "Male"),
-                    phone=slip_input.get("patient_phone", "+1 555-019-2834"),
+                    phone=slip_input.get("patient_phone", "+91 98765 43210"),
                     blood_group="O+"
                 ),
                 items=[SimpleNamespace(**it) if isinstance(it, dict) else it for it in slip_input.get("items", [])],
@@ -110,9 +110,9 @@ class PDFService:
         qr_buffer.seek(0)
         reportlab_qr = Image(qr_buffer, width=1.1*inch, height=1.1*inch)
 
-        clinic_name = getattr(slip.doctor, "clinic_name", "HealthSlip AI Medical Center")
-        doctor_name = getattr(slip.doctor, "name", "Dr. Minh Nguyen, M.D.")
-        license_num = getattr(slip.doctor, "license_number", "MED-2024-8841")
+        clinic_name = getattr(slip.doctor, "clinic_name", "HealthSlip AI Multi-Specialty Clinic & Seva Kendra")
+        doctor_name = getattr(slip.doctor, "name", "Dr. K. S. Rao, M.B.B.S., M.D.")
+        license_num = getattr(slip.doctor, "license_number", "TSMC-2024-8841")
         specialty = getattr(slip.doctor, "specialization", "General Medicine")
 
         clinic_text = f"""
@@ -138,10 +138,10 @@ class PDFService:
         elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#2563EB"), spaceBefore=2, spaceAfter=8))
 
         # 2. Patient Demographics & Clinical Summary
-        p_name = getattr(slip.patient, "full_name", "Minh")
+        p_name = getattr(slip.patient, "full_name", "Rajesh Kumar")
         p_age = getattr(slip.patient, "age", 28)
         p_gender = getattr(slip.patient, "gender", "Male")
-        p_phone = getattr(slip.patient, "phone", "+1 555-019-2834")
+        p_phone = getattr(slip.patient, "phone", "+91 98765 43210")
         p_blood = getattr(slip.patient, "blood_group", "O+")
 
         patient_data = [

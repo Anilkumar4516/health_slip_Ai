@@ -31,7 +31,7 @@ class DispenseOrder(Base):
     slip_number = Column(String(50), nullable=False, index=True)
     patient_name = Column(String(120), nullable=False)
     patient_phone = Column(String(30), nullable=False)
-    doctor_name = Column(String(120), default="Dr. Minh Nguyen, M.D.")
+    doctor_name = Column(String(120), default="Dr. K. S. Rao, M.B.B.S., M.D.")
     diagnosis = Column(String(255), default="General Consultation")
     store_type = Column(String(20), default="URBAN") # URBAN or RURAL
     status = Column(String(30), default="RECEIVED") # RECEIVED, PREPARING, READY_FOR_PICKUP, DISPENSED, CANCELLED

@@ -79,9 +79,9 @@ class Patient(Base):
     emergency_contact_phone = Column(String(20), nullable=True)
     address_line1 = Column(String(255), nullable=True)
     address_line2 = Column(String(255), nullable=True)
-    city = Column(String(64), nullable=True, default="Medical Arts District")
-    state = Column(String(64), nullable=True, default="CA")
-    postal_code = Column(String(20), nullable=True, default="90210")
+    city = Column(String(64), nullable=True, default="Hyderabad")
+    state = Column(String(64), nullable=True, default="Telangana")
+    postal_code = Column(String(20), nullable=True, default="500001")
     country_code = Column(String(2), default="IN")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
@@ -104,7 +104,7 @@ class Patient(Base):
 
     @property
     def phone(self) -> str:
-        return self.user.phone_number if self.user else "+1 555-019-2834"
+        return self.user.phone_number if self.user else "+91 98765 43210"
 
 class Practitioner(Base):
     __tablename__ = "practitioners"
@@ -121,8 +121,8 @@ class Practitioner(Base):
 
     @property
     def name(self) -> str:
-        return f"Dr. {self.specialization}" if not self.user else f"Dr. Minh Nguyen, M.D."
+        return f"Dr. {self.specialization}" if not self.user else f"Dr. K. S. Rao, M.B.B.S., M.D."
 
     @property
     def clinic_name(self) -> str:
-        return f"HealthSlip AI Medical Center ({self.department or 'Care Unit'})"
+        return f"HealthSlip AI Clinic & Seva Kendra ({self.department or 'General Medicine'})"

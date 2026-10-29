@@ -265,11 +265,11 @@ function fillDemoCredentials(role) {
   const passInput = document.getElementById('signin-password');
 
   if (role === 'doctor') {
-    if (idInput) idInput.value = 'dr.minh@healthslip.ai';
+    if (idInput) idInput.value = 'dr.rao@healthslip.ai';
     if (passInput) passInput.value = 'Doctor@2026';
     highlightInputPulse(idInput);
   } else if (role === 'patient') {
-    if (idInput) idInput.value = 'minh.patient@example.com';
+    if (idInput) idInput.value = 'rajesh.kumar@example.com';
     if (passInput) passInput.value = 'Patient@2026';
     highlightInputPulse(idInput);
   } else if (role === 'admin') {
@@ -466,7 +466,7 @@ async function handleRealtimeLogout() {
 
     // Reset doctor inputs if they were filled from previous doctor account
     const docName = document.getElementById('doc-name-input');
-    if (docName) docName.value = 'Dr. Minh Nguyen, M.D.';
+    if (docName) docName.value = 'Dr. K. S. Rao, M.B.B.S., M.D.';
 
     showToast(`Logged out safely. Goodbye, ${userName}!`, 'info');
 

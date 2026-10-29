@@ -208,8 +208,8 @@ function renderActiveSlipPreview(slip) {
     <div class="receipt-paper">
       <div class="receipt-header-row">
         <div>
-          <div style="font-size: 1rem; font-weight: 800; color: var(--navy);">${slip.clinic_name || 'HealthSlip AI Medical Center'}</div>
-          <div style="font-size: 0.8rem; color: var(--text-muted);">${slip.doctor_name || 'Dr. Minh Nguyen, M.D.'}</div>
+          <div style="font-size: 1rem; font-weight: 800; color: var(--navy);">${slip.clinic_name || 'HealthSlip AI Multi-Specialty Clinic & Seva Kendra'}</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">${slip.doctor_name || 'Dr. K. S. Rao, M.B.B.S., M.D.'}</div>
           <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">Receipt: <b>${slip.slip_number}</b> • ${dateFmt}</div>
         </div>
         <div class="receipt-qr-wrap" title="Scan to verify tamper-proof seal">
@@ -219,7 +219,7 @@ function renderActiveSlipPreview(slip) {
 
       <!-- Diagnosis & Patient Demographics -->
       <div style="background: var(--surface-alt); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.82rem;">
-        <div><b>Patient:</b> ${slip.patient_name || slip.patient?.full_name || 'Minh'} (${slip.patient_phone || '+1 555-019-2834'})</div>
+        <div><b>Patient:</b> ${slip.patient_name || slip.patient?.full_name || 'Rajesh Kumar'} (${slip.patient_phone || '+91 98765 43210'})</div>
         <div style="margin-top: 2px;"><b>Diagnosis:</b> ${slip.diagnosis || 'Clinical Consultation'}</div>
         <div style="color: var(--text-muted); margin-top: 2px;"><b>Notes:</b> ${slip.symptoms || 'General routine care'}</div>
       </div>

@@ -53,8 +53,8 @@ def list_receipts(
         patient = bill.patient if bill else None
         practitioner = bill.prescription.practitioner if bill and bill.prescription else None
 
-        p_name = patient.full_name if patient else "Minh"
-        p_phone = patient.phone if patient else "+1 555-019-2834"
+        p_name = patient.full_name if patient else "Rajesh Kumar"
+        p_phone = patient.phone if patient else "+91 98765 43210"
 
         if search:
             s_low = search.strip().lower()
@@ -67,7 +67,7 @@ def list_receipts(
             visit_date=r.created_at,
             patient_name=p_name,
             patient_phone=p_phone,
-            doctor_name=practitioner.name if practitioner else "Dr. Minh Nguyen, M.D.",
+            doctor_name=practitioner.name if practitioner else "Dr. K. S. Rao, M.B.B.S., M.D.",
             diagnosis=bill.prescription.diagnosis if bill and bill.prescription else "General Consultation",
             grand_total=r.amount_paid_cents / 100.0,
             payment_status="PAID" if r.payment_status == "SUCCESS" else r.payment_status,

@@ -27,12 +27,12 @@ Inspired by modern clinical apps, HealthSlip AI bridges the gap between fast cli
 - **Privacy-Preserving Public Scan**: Verifies receipt authenticity, doctor name, and hospital registration without exposing sensitive patient health details (name is masked e.g. `M*** N*****`).
 
 ### 4. 📱 Interactive Patient Mobile App (Faithful to Design Screenshot)
-- **Patient Profile**: Friendly greeting (`Good day, Minh`), search bar, and notification bell.
+- **Patient Profile**: Friendly greeting (`Good day, Rajesh Kumar`), search bar, and notification bell.
 - **Interactive Calendar Ribbon**: Horizontally scrollable calendar selector (`August 2022`, `Sun 21`, `Mon 22`...).
 - **Medication Reminders & Adherence Tracker**:
-  - Morning (`12:00 am`): *Ibuprofen 1 pill* -> `[DONE]`
-  - After lunch: *Ibuprofen metisylat 1 pill* -> `[DONE]`
-  - Afternoon: *Ibuprofen 1 pill* -> `[DONE]`
+  - Morning (`08:00 am`): *Pan-D Capsule* -> `[DONE]`
+  - Afternoon (`02:00 pm`): *Crocin 650mg* -> `[DONE]`
+  - Night (`09:00 pm`): *Crocin 650mg* -> `[DONE]`
 - **Real-Time Adherence Calculation**: Updates adherence % dynamically when doses are checked off.
 
 ### 5. 📄 Official PDF Receipt Generator
@@ -162,8 +162,8 @@ gunicorn -c gunicorn_conf.py main:app
 ## 🧪 Interactive Testing Walkthrough
 
 1. **Patient App View**:
-   - See the mobile phone frame with "Good day, Minh" and the August 2022 calendar ribbon.
-   - Click the amber **`DONE`** button on *Ibuprofen* or *Ibuprofen metisylat* to toggle doses and watch the adherence percentage update!
+   - See the mobile phone frame with "Good day, Rajesh Kumar" and the August 2022 calendar ribbon.
+   - Click the amber **`DONE`** button on *Pan-D* or *Crocin* to toggle doses and watch the adherence percentage update!
 2. **Doctor AI Slip Builder**:
    - Click the **Doctor AI Slip Builder** tab in the top navigation.
    - Click one of the quick templates (e.g. *Sample: Migraine & Rhinitis*).
@@ -171,7 +171,7 @@ gunicorn -c gunicorn_conf.py main:app
    - Click **`Issue Verified Health Slip`** to save to the database with a cryptographic HMAC-SHA256 seal.
 3. **OTP Patient Verification**:
    - Click **`OTP Verification`** in the top navbar or bell icon on the mobile phone.
-   - Enter patient phone number (`+1 555-019-2834`) and click **Send Verification Code**.
+   - Enter patient phone number (`+91 98765 43210`) and click **Send Verification Code**.
    - Click the Dev Sandbox OTP code in the yellow helper banner to auto-fill the 6 digits.
    - Click **Verify Identity & Access Slips** to unlock the secure patient vault.
 4. **Download PDF Receipt**:

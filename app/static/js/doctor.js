@@ -4,11 +4,11 @@ let currentReceiptItems = [];
 let currentReminders = [];
 
 const SAMPLE_CLINICAL_NOTES = {
-  migraine: `Patient Minh Nguyen, 28/M, presenting with acute episodic tension migraine and mild rhinovirus nasal congestion.
+  migraine: `Patient Rajesh Kumar, 28/M, presenting with acute episodic tension migraine and mild rhinovirus nasal congestion.
 Vitals: BP 120/78, Temp 98.6F, Pulse 72.
 Prescription Plan:
-1. Ibuprofen 400mg, 1 pill at 12:00 am and after lunch for 5 days.
-2. Ibuprofen metisylat, 1 pill after lunch for 5 days.
+1. Crocin 650mg, 1 tablet twice daily after meals for 5 days.
+2. Pan-D capsule, 1 capsule empty stomach in morning for 5 days.
 Advised ample fluid hydration and restful sleep. Complete physical examination conducted. Consultation fee ₹500. Follow up in 7 days.`,
 
   bronchitis: `Patient Sarah Jenkins, 42/F, complaints of persistent productive cough, low-grade fever 100.4F, and chest congestion for 4 days.
@@ -55,10 +55,10 @@ async function runAIExtraction() {
   try {
     const payload = {
       clinical_notes: notes,
-      patient_name: document.getElementById('doc-patient-name')?.value || 'Minh',
+      patient_name: document.getElementById('doc-patient-name')?.value || 'Rajesh Kumar',
       patient_age: parseInt(document.getElementById('doc-patient-age')?.value) || 28,
       patient_gender: document.getElementById('doc-patient-gender')?.value || 'Male',
-      patient_phone: document.getElementById('doc-patient-phone')?.value || '+1 555-019-2834'
+      patient_phone: document.getElementById('doc-patient-phone')?.value || '+91 98765 43210'
     };
 
     const result = await API.post('/api/receipts/ai-parse', payload);
@@ -249,16 +249,16 @@ async function submitCreateHealthSlip() {
     return;
   }
 
-  const patientName = document.getElementById('doc-patient-name')?.value || 'Minh';
-  const patientPhone = document.getElementById('doc-patient-phone')?.value || '+1 555-019-2834';
+  const patientName = document.getElementById('doc-patient-name')?.value || 'Rajesh Kumar';
+  const patientPhone = document.getElementById('doc-patient-phone')?.value || '+91 98765 43210';
 
   const currentUser = API.getCurrentUser();
   const docName = (currentUser && currentUser.primary_role === 'DOCTOR') 
     ? currentUser.full_name 
-    : 'Dr. Minh Nguyen, M.D.';
+    : 'Dr. K. S. Rao, M.B.B.S., M.D.';
   const docLicense = (currentUser && currentUser.practitioner_license) 
     ? currentUser.practitioner_license 
-    : 'MED-2024-8841';
+    : 'TSMC-2024-8841';
 
   const payload = {
     patient: {
@@ -268,11 +268,11 @@ async function submitCreateHealthSlip() {
       phone: patientPhone,
       email: `${patientName.toLowerCase().replace(/\s+/g, '')}@example.com`,
       blood_group: 'O+',
-      address: '452 Elm Street, Medical Arts District'
+      address: 'Plot 42, Sri Sai Nagar, Hyderabad, Telangana 500001'
     },
     doctor_name: docName,
     doctor_license: docLicense,
-    clinic_name: 'HealthSlip AI Medical Center',
+    clinic_name: 'HealthSlip AI Multi-Specialty Clinic & Seva Kendra',
     symptoms: document.getElementById('doc-symptoms')?.value || 'Clinical checkup',
     diagnosis: document.getElementById('doc-diagnosis')?.value || 'General Consultation',
     clinical_notes: document.getElementById('ai-clinical-notes-input')?.value || '',

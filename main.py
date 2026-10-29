@@ -25,7 +25,7 @@ except Exception as e:
     print(f"[Database] Schema already verified ({e})")
 
 def seed_initial_demo_data():
-    """Seed sample doctor, patient Minh, and demo HealthSlip into MySQL healthslip_prod"""
+    """Seed sample doctor, patient Rajesh Kumar, and demo HealthSlip into MySQL healthslip_prod"""
     db = SessionLocal()
     try:
         # Seed default RBAC roles if empty
@@ -43,77 +43,77 @@ def seed_initial_demo_data():
         if receipt_count == 0:
             demo_payload = HealthSlipCreate(
                 patient=PatientEmbeddedCreate(
-                    full_name="Minh",
+                    full_name="Rajesh Kumar",
                     age=28,
                     gender="Male",
-                    phone="+1 555-019-2834",
-                    email="minh.patient@example.com",
+                    phone="+91 98765 43210",
+                    email="rajesh.kumar@example.com",
                     blood_group="O+",
-                    address="452 Elm Street, Medical Arts District"
+                    address="Plot 42, Sri Sai Nagar, Hyderabad, Telangana 500001"
                 ),
-                doctor_name="Dr. Minh Nguyen, M.D.",
-                doctor_license="MED-2024-8841",
-                clinic_name="HealthSlip AI Medical Center",
+                doctor_name="Dr. K. S. Rao, M.B.B.S., M.D.",
+                doctor_license="TSMC-2024-8841",
+                clinic_name="HealthSlip AI Multi-Specialty Clinic & Seva Kendra",
                 diagnosis="Acute Tension Migraine & Mild Rhinovirus",
                 symptoms="Severe tension headache, nasal congestion, seasonal fatigue",
-                clinical_notes="Patient presented with acute tension headache. Advised adequate hydration, rest, and prescribed Ibuprofen regimen.",
-                ai_insights="Prescribed NSAID therapy. Contraindications checked: No reported NSAID allergy. Reminder: take with meals.",
+                clinical_notes="Patient presented with acute tension headache. Advised adequate hydration, rest, and prescribed Crocin & Pan-D regimen.",
+                ai_insights="Prescribed Paracetamol & PPI therapy. Contraindications checked: No reported NSAID allergy. Reminder: take after meals with water.",
                 items=[
                     ReceiptItemCreate(
                         item_type="CONSULTATION",
                         item_name="Physician Consultation & Health Exam",
-                        unit_price=50.0,
+                        unit_price=500.0,
                         quantity=1,
                         instructions="General diagnostic assessment"
                     ),
                     ReceiptItemCreate(
                         item_type="MEDICATION",
-                        item_name="Ibuprofen 400mg Film-Coated",
-                        unit_price=12.0,
+                        item_name="Crocin 650mg Fast Relief",
+                        unit_price=20.0,
                         quantity=1,
-                        dosage="1 pill",
-                        instructions="Take with water after meals"
+                        dosage="1 tablet",
+                        instructions="భోజనం తర్వాత నీటితో తీసుకోండి (Take after meals with water)"
                     ),
                     ReceiptItemCreate(
                         item_type="MEDICATION",
-                        item_name="Ibuprofen metisylat",
-                        unit_price=13.0,
+                        item_name="Pan-D Gastro-Resistant Capsule",
+                        unit_price=110.0,
                         quantity=1,
-                        dosage="1 pill",
-                        instructions="Take after lunch"
+                        dosage="1 capsule",
+                        instructions="ఉదయం ఖాళీ కడుపుతో తీసుకోండి (Take empty stomach in morning)"
                     )
                 ],
                 reminders=[
                     MedicationReminderCreate(
-                        medicine_name="Ibuprofen",
-                        dosage="1 pill",
+                        medicine_name="Crocin 650mg",
+                        dosage="1 tablet",
+                        timing_slot="AFTERNOON",
+                        schedule_time="02:00 pm",
+                        instructions="భోజనం తర్వాత నీటితో తీసుకోండి",
+                        duration_days=5
+                    ),
+                    MedicationReminderCreate(
+                        medicine_name="Pan-D Capsule",
+                        dosage="1 capsule",
                         timing_slot="MORNING",
-                        schedule_time="12:00 am",
-                        instructions="Take with water",
+                        schedule_time="08:00 am",
+                        instructions="ఉదయం ఖాళీ కడుపుతో తీసుకోండి",
                         duration_days=5
                     ),
                     MedicationReminderCreate(
-                        medicine_name="Ibuprofen metisylat",
-                        dosage="1 pill",
-                        timing_slot="AFTERNOON",
-                        schedule_time="After lunch",
-                        instructions="Take with full glass of water",
-                        duration_days=5
-                    ),
-                    MedicationReminderCreate(
-                        medicine_name="Ibuprofen",
-                        dosage="1 pill",
-                        timing_slot="AFTERNOON",
-                        schedule_time="Afternoon",
-                        instructions="Post-lunch dosage",
+                        medicine_name="Crocin 650mg",
+                        dosage="1 tablet",
+                        timing_slot="NIGHT",
+                        schedule_time="09:00 pm",
+                        instructions="రాత్రి భోజనం తర్వాత తీసుకోండి",
                         duration_days=5
                     )
                 ],
-                tax_percent=4.0,
+                tax_percent=5.0,
                 discount_amount=0.0,
                 insurance_covered=0.0,
                 payment_status="PAID",
-                payment_method="Apple Pay / NFC"
+                payment_method="UPI / PhonePe / Cash Memo"
             )
             ReceiptService.create_health_slip(db, demo_payload)
             print("[Seed] Successfully seeded initial demo records into MySQL healthslip_prod!")
@@ -123,22 +123,51 @@ def seed_initial_demo_data():
         patient_role = db.query(Role).filter(Role.code == "PATIENT").first()
         admin_role = db.query(Role).filter(Role.code == "ADMIN").first()
 
-        # Update Doctor password if needed
-        dr = db.query(User).filter(User.email == "dr.minh@healthslip.ai").first()
-        if dr and not dr.password_hash.startswith("pbkdf2_sha256$"):
-            dr.password_hash = AuthService.hash_password("Doctor@2026")
+        # Seed/Update Doctor accounts (both dr.rao and dr.minh supported)
+        for doc_email, doc_phone in [("dr.rao@healthslip.ai", "+919876500001"), ("dr.minh@healthslip.ai", "+15552345678")]:
+            dr = db.query(User).filter((User.email == doc_email) | (User.phone_number == doc_phone)).first()
+            if not dr and doctor_role:
+                dr = User(
+                    email=doc_email,
+                    phone_number=doc_phone,
+                    password_hash=AuthService.hash_password("Doctor@2026"),
+                    status="ACTIVE",
+                    is_phone_verified=True,
+                    is_email_verified=True
+                )
+                db.add(dr)
+                db.flush()
+                db.add(UserRole(user_id=dr.id, role_id=doctor_role.id))
+            elif dr and not dr.password_hash.startswith("pbkdf2_sha256$"):
+                dr.password_hash = AuthService.hash_password("Doctor@2026")
 
-        # Update Patient password if needed
-        pt = db.query(User).filter(User.email == "minh.patient@example.com").first()
-        if pt and not pt.password_hash.startswith("pbkdf2_sha256$"):
-            pt.password_hash = AuthService.hash_password("Patient@2026")
+        # Seed/Update Patient accounts (both rajesh.kumar and minh.patient supported)
+        for pt_email, pt_phone in [("rajesh.kumar@example.com", "+919876543210"), ("minh.patient@example.com", "+15550192834")]:
+            pt = db.query(User).filter((User.email == pt_email) | (User.phone_number == pt_phone)).first()
+            if not pt and patient_role:
+                pt = User(
+                    email=pt_email,
+                    phone_number=pt_phone,
+                    password_hash=AuthService.hash_password("Patient@2026"),
+                    status="ACTIVE",
+                    is_phone_verified=True,
+                    is_email_verified=True
+                )
+                db.add(pt)
+                db.flush()
+                db.add(UserRole(user_id=pt.id, role_id=patient_role.id))
+            elif pt:
+                if not pt.password_hash.startswith("pbkdf2_sha256$"):
+                    pt.password_hash = AuthService.hash_password("Patient@2026")
+                if not pt.email:
+                    pt.email = pt_email
 
         # Ensure Admin user exists
-        admin = db.query(User).filter(User.email == "admin@healthslip.ai").first()
+        admin = db.query(User).filter((User.email == "admin@healthslip.ai") | (User.phone_number == "+919876500099")).first()
         if not admin and admin_role:
             admin = User(
                 email="admin@healthslip.ai",
-                phone_number="+15550009999",
+                phone_number="+919876500099",
                 password_hash=AuthService.hash_password("Admin@2026"),
                 status="ACTIVE",
                 is_phone_verified=True,

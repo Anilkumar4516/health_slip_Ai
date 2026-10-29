@@ -98,10 +98,10 @@
               <!-- User Greeting Header -->
               <div class="phone-user-header">
                 <div class="phone-user-info">
-                  <div class="phone-avatar" id="patient-avatar-letter">M</div>
+                  <div class="phone-avatar" id="patient-avatar-letter">R</div>
                   <div>
                     <div class="phone-greeting-text">Good day,</div>
-                    <div class="phone-user-name" id="patient-display-name">Minh</div>
+                    <div class="phone-user-name" id="patient-display-name">Rajesh Kumar</div>
                   </div>
                 </div>
                 <button class="phone-icon-btn" onclick="openOtpModal()" title="OTP Verification Status">
@@ -271,7 +271,7 @@
             <span style="font-size: 0.75rem; color: var(--text-muted);">Parses medicines, dosage, tests, prices & warnings</span>
           </div>
           
-          <textarea id="ai-clinical-notes-input" class="ai-textarea" placeholder="e.g. Patient Minh Nguyen, 29/M, presents with severe tension migraine. Prescribe Ibuprofen 400mg 1 pill at 12:00 am and after lunch for 5 days. Add Ibuprofen metisylat 1 pill after lunch. Advised CBC blood test and complete rest. Consultation fee ₹500."></textarea>
+          <textarea id="ai-clinical-notes-input" class="ai-textarea" placeholder="e.g. Patient Rajesh Kumar, 28/M, presents with severe tension migraine. Prescribe Crocin 650mg 1 tablet after meals for 5 days. Add Pan-D 1 capsule empty stomach. Advised CBC blood test and complete rest. Consultation fee ₹500."></textarea>
           
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <button class="btn-ai-generate" id="btn-run-ai" onclick="runAIExtraction()">
@@ -312,7 +312,7 @@
         <div class="form-grid-3">
           <div class="input-group">
             <label class="input-label">Patient Full Name</label>
-            <input type="text" id="doc-patient-name" class="form-input" value="Minh">
+            <input type="text" id="doc-patient-name" class="form-input" value="Rajesh Kumar">
           </div>
           <div class="input-group">
             <label class="input-label">Age / Gender</label>
@@ -327,7 +327,7 @@
           </div>
           <div class="input-group">
             <label class="input-label">Patient Phone (for OTP & SMS)</label>
-            <input type="text" id="doc-patient-phone" class="form-input" value="+1 555-019-2834">
+            <input type="text" id="doc-patient-phone" class="form-input" value="+91 98765 43210">
           </div>
         </div>
 
@@ -723,10 +723,10 @@
         <span class="auth-demo-label">1-Click Quick Demo Accounts:</span>
         <div class="auth-demo-chips">
           <button type="button" class="auth-demo-btn doctor" onclick="fillDemoCredentials('doctor')">
-            🩺 Doctor (Dr. Minh)
+            🩺 Doctor (Dr. K. S. Rao)
           </button>
           <button type="button" class="auth-demo-btn patient" onclick="fillDemoCredentials('patient')">
-            👤 Patient (Minh)
+            👤 Patient (Rajesh Kumar)
           </button>
           <button type="button" class="auth-demo-btn admin" onclick="fillDemoCredentials('admin')">
             ⚡ Admin
@@ -756,7 +756,7 @@
           <label class="input-label">Email or Mobile Number</label>
           <div class="input-icon-wrapper">
             <svg class="input-prefix-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <input type="text" id="signin-identity" class="form-input with-prefix" placeholder="e.g. dr.minh@healthslip.ai" required autocomplete="username">
+            <input type="text" id="signin-identity" class="form-input with-prefix" placeholder="e.g. dr.rao@healthslip.ai" required autocomplete="username">
           </div>
         </div>
 
@@ -792,7 +792,7 @@
         <div class="input-group" style="text-align: left; margin-bottom: 0.85rem;">
           <label class="input-label">Registered Mobile Number</label>
           <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="otp-login-phone" class="form-input" placeholder="+1 555-019-2834" value="+1 555-019-2834" style="flex: 1;">
+            <input type="text" id="otp-login-phone" class="form-input" placeholder="+91 98765 43210" value="+91 98765 43210" style="flex: 1;">
             <button type="button" class="btn-scan-action" style="padding: 0 1rem; font-size: 0.8rem; background: var(--primary); color: white;" onclick="requestOtpForLoginTab()">
               Get Code
             </button>
@@ -826,7 +826,7 @@
           </div>
           <div class="input-group" style="text-align: left;">
             <label class="input-label">Mobile Number</label>
-            <input type="tel" id="reg-phone" class="form-input" placeholder="+1 555-012-3456" required autocomplete="tel">
+            <input type="tel" id="reg-phone" class="form-input" placeholder="+91 98765 43210" required autocomplete="tel">
           </div>
         </div>
 
@@ -889,7 +889,7 @@
       <div id="otp-step-phone">
         <div class="input-group" style="text-align: left; margin-bottom: 1rem;">
           <label class="input-label">Patient Mobile Number</label>
-          <input type="text" id="otp-input-phone" class="form-input" value="+1 555-019-2834" placeholder="+1 555-019-2834">
+          <input type="text" id="otp-input-phone" class="form-input" value="+91 98765 43210" placeholder="+91 98765 43210">
         </div>
         <button class="btn-modal-action" style="width: 100%;" onclick="requestOtpCode()">
           Send Verification Code

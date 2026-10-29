@@ -164,15 +164,15 @@ def get_pharmacy_invoice_memo(slip_number: str, db: Session = Depends(get_db)):
             "pharmacist": dispense.pharmacist_notes if dispense else "Licensed Clinical Pharmacist (Reg #PH-9841)"
         },
         "patient": {
-            "name": patient.full_name if patient else "Minh",
-            "phone": patient.phone if patient else "+1 555-019-2834",
+            "name": patient.full_name if patient else "Rajesh Kumar",
+            "phone": patient.phone if patient else "+91 98765 43210",
             "age": patient.age if patient else 28,
             "gender": patient.gender if patient else "MALE"
         },
         "doctor": {
-            "name": doctor.name if doctor else "Dr. Minh Nguyen, M.D.",
-            "license": doctor.license_number if doctor else "MED-2024-8841",
-            "clinic": doctor.clinic_name if doctor else "HealthSlip Medical Center"
+            "name": doctor.name if doctor else "Dr. K. S. Rao, M.B.B.S., M.D.",
+            "license": doctor.license_number if doctor else "TSMC-2024-8841",
+            "clinic": doctor.clinic_name if doctor else "HealthSlip AI Multi-Specialty Clinic & Seva Kendra"
         },
         "items": items_list,
         "financials": {
@@ -208,8 +208,8 @@ def get_pharmacy_queue(
         practitioner = prescription.practitioner if prescription else None
 
         slip_no = r.receipt_number
-        p_name = patient.full_name if patient else "Minh Patient"
-        p_phone = patient.phone if patient else "+1 555-019-2834"
+        p_name = patient.full_name if patient else "Rajesh Kumar"
+        p_phone = patient.phone if patient else "+91 98765 43210"
 
         # Check existing dispense order
         dispense = db.query(DispenseOrder).filter(DispenseOrder.slip_number == slip_no).first()
@@ -234,7 +234,7 @@ def get_pharmacy_queue(
             "slip_number": slip_no,
             "patient_name": p_name,
             "patient_phone": p_phone,
-            "doctor_name": practitioner.name if practitioner else "Dr. Minh Nguyen, M.D.",
+            "doctor_name": practitioner.name if practitioner else "Dr. K. S. Rao, M.B.B.S., M.D.",
             "diagnosis": prescription.diagnosis if prescription else "General Consultation",
             "grand_total": r.amount_paid_cents / 100.0,
             "created_at": r.created_at.isoformat(),
@@ -277,9 +277,9 @@ def dispense_prescription(req: DispenseRequest, db: Session = Depends(get_db)):
         )
 
     receipt = db.query(Receipt).filter(Receipt.receipt_number == req.slip_number).first()
-    patient_name = "Patient"
-    patient_phone = "+1 555-019-2834"
-    doc_name = "Dr. Minh Nguyen, M.D."
+    patient_name = "Rajesh Kumar"
+    patient_phone = "+91 98765 43210"
+    doc_name = "Dr. K. S. Rao, M.B.B.S., M.D."
     diag = "General Consultation"
     total_val = 0.0
 
@@ -401,7 +401,7 @@ def get_rural_sms_slip(req: RuralSmsRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Slip not found.")
 
     items = [{"item_name": bi.description, "quantity": bi.quantity} for bi in receipt.bill.items]
-    patient_name = receipt.bill.patient.full_name if receipt.bill.patient else "Minh"
+    patient_name = receipt.bill.patient.full_name if receipt.bill.patient else "Rajesh Kumar"
     total = receipt.amount_paid_cents / 100.0
 
     sms_text = GenericDrugService.generate_rural_sms_slip(

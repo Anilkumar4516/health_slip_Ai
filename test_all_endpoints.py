@@ -178,7 +178,17 @@ print(f"[23/24] POST /api/patients: OK (Registered: {pat_data['full_name']}, ID:
 # 24. Registered Patients Directory Search
 pat_search = client.get(f"/api/patients?search=Anil")
 assert pat_search.status_code == 200 and len(pat_search.json()) > 0, "Patient directory search failed"
-print(f"[24/24] GET /api/patients: OK (Found {len(pat_search.json())} patient matches)")
+print(f"[24/25] GET /api/patients: OK (Found {len(pat_search.json())} patient matches)")
 
-print("\n>>> ALL 24 PRODUCTION-GRADE ENDPOINTS VERIFIED 100% OPERATIONAL WITH MYSQL HEALTHSLIP_PROD! <<<")
+# 25. Indian Doctor Login (Dr. K. S. Rao)
+dr_rao_login = client.post("/api/auth/login", json={
+    "email_or_phone": "dr.rao@healthslip.ai",
+    "password": "Doctor@2026"
+})
+assert dr_rao_login.status_code == 200, f"Dr. Rao login failed: {dr_rao_login.text}"
+dr_rao_data = dr_rao_login.json()
+assert dr_rao_data["user"]["primary_role"] == "DOCTOR"
+print(f"[25/25] POST /api/auth/login: OK (Dr. Rao signed in, Primary role: DOCTOR)")
+
+print("\n>>> ALL 25 PRODUCTION-GRADE ENDPOINTS VERIFIED 100% OPERATIONAL WITH MYSQL HEALTHSLIP_PROD! <<<")
 

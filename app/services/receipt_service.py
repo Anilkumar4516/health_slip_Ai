@@ -47,7 +47,7 @@ class ReceiptService:
 
     @staticmethod
     def mask_name(name: str) -> str:
-        """Mask name for public verification scan e.g. 'Minh Nguyen' -> 'M*** N*****'"""
+        """Mask name for public verification scan e.g. 'Rajesh Kumar' -> 'R***** K****'"""
         if not name:
             return "P******"
         parts = name.split()
@@ -97,28 +97,31 @@ class ReceiptService:
         # 1. Find or create Practitioner (Doctor)
         practitioner = db.query(Practitioner).filter(Practitioner.license_number == slip_data.doctor_license).first()
         if not practitioner:
-            doc_user = db.query(User).filter(User.email == "dr.minh@healthslip.ai").first()
-            if not doc_user:
-                doc_user = User(
-                    uuid=str(uuid.uuid4()),
-                    email="dr.minh@healthslip.ai",
-                    phone_number="+15552345678",
-                    password_hash="sha256$practitioner$hash",
-                    status="ACTIVE",
-                    is_phone_verified=True,
-                    is_email_verified=True
-                )
-                db.add(doc_user)
-                db.flush()
+            doc_user = db.query(User).filter(User.email.in_(["dr.rao@healthslip.ai", "dr.minh@healthslip.ai"])).first()
+            if doc_user and doc_user.practitioner:
+                practitioner = doc_user.practitioner
+            else:
+                if not doc_user:
+                    doc_user = User(
+                        uuid=str(uuid.uuid4()),
+                        email="dr.rao@healthslip.ai",
+                        phone_number="+919876500001",
+                        password_hash="sha256$practitioner$hash",
+                        status="ACTIVE",
+                        is_phone_verified=True,
+                        is_email_verified=True
+                    )
+                    db.add(doc_user)
+                    db.flush()
 
-            practitioner = Practitioner(
-                user_id=doc_user.id,
-                license_number=slip_data.doctor_license,
-                specialization="General & Internal Medicine",
-                department="Clinical Diagnostics"
-            )
-            db.add(practitioner)
-            db.flush()
+                practitioner = Practitioner(
+                    user_id=doc_user.id,
+                    license_number=slip_data.doctor_license,
+                    specialization="General & Internal Medicine",
+                    department="Clinical Diagnostics"
+                )
+                db.add(practitioner)
+                db.flush()
 
         # 2. Find or create Patient & User account
         clean_phone = slip_data.patient.phone.strip().replace(" ", "").replace("-", "")
@@ -152,7 +155,7 @@ class ReceiptService:
                 gender='MALE' if slip_data.patient.gender.upper().startswith('M') else 'FEMALE',
                 blood_group=slip_data.patient.blood_group or 'O+',
                 emergency_contact_phone=clean_phone,
-                address_line1=slip_data.patient.address or "452 Elm Street"
+                address_line1=slip_data.patient.address or "Plot 42, Sri Sai Nagar, Hyderabad, Telangana 500001"
             )
             db.add(patient)
             db.flush()
@@ -379,10 +382,10 @@ class ReceiptService:
             "payment_method": receipt.payment_method,
             "verification_hash": receipt.gateway_transaction_id or "",
             "status": bill.status,
-            "doctor_name": practitioner.name if practitioner else "Dr. Minh Nguyen, M.D.",
-            "clinic_name": practitioner.clinic_name if practitioner else "HealthSlip AI Medical Center",
-            "patient_name": patient.full_name if patient else "Minh",
-            "patient_phone": patient.phone if patient else "+1 555-019-2834",
+            "doctor_name": practitioner.name if practitioner else "Dr. K. S. Rao, M.B.B.S., M.D.",
+            "clinic_name": practitioner.clinic_name if practitioner else "HealthSlip AI Multi-Specialty Clinic & Seva Kendra",
+            "patient_name": patient.full_name if patient else "Rajesh Kumar",
+            "patient_phone": patient.phone if patient else "+91 98765 43210",
             "patient_age": patient.age if patient else 28,
             "patient_gender": patient.gender if patient else "Male",
             "items": items_data,
@@ -430,9 +433,9 @@ class ReceiptService:
             "slip_number": receipt.receipt_number,
             "verification_hash": receipt.gateway_transaction_id or "",
             "issued_date": receipt.created_at,
-            "clinic_name": practitioner.clinic_name if practitioner else "HealthSlip AI Medical Center",
-            "doctor_name": practitioner.name if practitioner else "Dr. Minh Nguyen, M.D.",
-            "patient_masked_name": ReceiptService.mask_name(bill.patient.full_name if bill and bill.patient else "Minh"),
+            "clinic_name": practitioner.clinic_name if practitioner else "HealthSlip AI Multi-Specialty Clinic & Seva Kendra",
+            "doctor_name": practitioner.name if practitioner else "Dr. K. S. Rao, M.B.B.S., M.D.",
+            "patient_masked_name": ReceiptService.mask_name(bill.patient.full_name if bill and bill.patient else "Rajesh Kumar"),
             "payment_status": "PAID" if receipt.payment_status == "SUCCESS" else receipt.payment_status,
             "grand_total": grand_total,
             "status": bill.status if bill else "ACTIVE",

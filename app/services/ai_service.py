@@ -127,10 +127,10 @@ class AIService:
                 reminders = [MedicationReminderCreate(**rem) for rem in parsed.get("reminders", [])]
                 
                 return AIExtractedResponse(
-                    patient_name=parsed.get("patient_name") or req.patient_name or "Patient",
-                    patient_age=int(parsed.get("patient_age") or req.patient_age or 30),
-                    patient_gender=parsed.get("patient_gender") or req.patient_gender or "Other",
-                    patient_phone=parsed.get("patient_phone") or req.patient_phone or "+1 555-019-2834",
+                    patient_name=parsed.get("patient_name") or req.patient_name or "Rajesh Kumar",
+                    patient_age=int(parsed.get("patient_age") or req.patient_age or 28),
+                    patient_gender=parsed.get("patient_gender") or req.patient_gender or "Male",
+                    patient_phone=parsed.get("patient_phone") or req.patient_phone or "+91 98765 43210",
                     symptoms=parsed.get("symptoms") or "Clinical assessment recorded",
                     diagnosis=parsed.get("diagnosis") or "General Medical Examination",
                     items=items,
@@ -151,7 +151,7 @@ class AIService:
         notes_lower = notes.lower()
 
         # 1. Patient extraction from notes if present
-        patient_name = req.patient_name or "Minh Nguyen"
+        patient_name = req.patient_name or "Rajesh Kumar"
         name_match = re.search(r"(?:patient(?:\s+name)?|pt)[\s:]+([A-Za-z\s]+?)(?:,|\.|\n|\d|$)", notes, re.IGNORECASE)
         if name_match and len(name_match.group(1).strip()) > 2:
             patient_name = name_match.group(1).strip().title()
@@ -353,7 +353,7 @@ class AIService:
             patient_name=patient_name,
             patient_age=patient_age,
             patient_gender=patient_gender,
-            patient_phone=req.patient_phone or "+1 555-019-2834",
+            patient_phone=req.patient_phone or "+91 98765 43210",
             symptoms=symptoms,
             diagnosis=diagnosis,
             items=items,
