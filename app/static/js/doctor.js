@@ -9,7 +9,7 @@ Vitals: BP 120/78, Temp 98.6F, Pulse 72.
 Prescription Plan:
 1. Ibuprofen 400mg, 1 pill at 12:00 am and after lunch for 5 days.
 2. Ibuprofen metisylat, 1 pill after lunch for 5 days.
-Advised ample fluid hydration and restful sleep. Complete physical examination conducted. Consultation fee $50. Follow up in 7 days.`,
+Advised ample fluid hydration and restful sleep. Complete physical examination conducted. Consultation fee ₹500. Follow up in 7 days.`,
 
   bronchitis: `Patient Sarah Jenkins, 42/F, complaints of persistent productive cough, low-grade fever 100.4F, and chest congestion for 4 days.
 Impression: Acute Bacterial Bronchitis.
@@ -17,7 +17,7 @@ Prescriptions & Diagnostics:
 1. Amoxicillin 500mg, 1 tablet three times daily (morning, afternoon, evening) for 7 days.
 2. Paracetamol 650mg SOS for fever control.
 3. Ordered Complete Blood Count (CBC) and Digital Chest X-Ray.
-Consultation $50. Warning: Complete full antibiotic regimen. Review in 5 days.`,
+Consultation fee ₹500. Warning: Complete full antibiotic regimen. Review in 5 days.`,
 
   hypertension: `Patient Robert Chen, 54/M, routine cardio-metabolic evaluation.
 Diagnosis: Primary Hypertension Stage 1 & Dyslipidemia.
@@ -25,7 +25,7 @@ Prescription:
 1. Atorvastatin 20mg, 1 tablet at night for 30 days.
 2. Metformin 500mg, 1 tablet with breakfast for 30 days.
 Diagnostics ordered: Fasting Blood Glucose, Comprehensive Lipid Panel, and 12-lead ECG.
-Consultation $50. Advised low sodium diet and daily 30-min brisk walk.`
+Consultation fee ₹500. Advised low sodium diet and daily 30-min brisk walk.`
 };
 
 function fillSamplePrompt(type) {
@@ -131,7 +131,7 @@ function renderReceiptItemsTable() {
           oninput="updateItemField(${idx}, 'quantity', parseInt(this.value) || 1)">
       </td>
       <td style="font-weight: 700; color: var(--navy);">
-        $${((item.unit_price || 0) * (item.quantity || 1)).toFixed(2)}
+        ₹${((item.unit_price || 0) * (item.quantity || 1)).toFixed(2)}
       </td>
       <td>
         <button class="btn-remove-row" onclick="removeItemRow(${idx})" title="Remove item">✕</button>
@@ -235,10 +235,10 @@ function recalculateFinancials() {
   const discount = 0.0;
   const grandTotal = Math.max(0, subtotal + tax - discount);
 
-  document.getElementById('calc-subtotal').textContent = `$${subtotal.toFixed(2)}`;
-  document.getElementById('calc-tax').textContent = `$${tax.toFixed(2)}`;
-  document.getElementById('calc-discount').textContent = `-$${discount.toFixed(2)}`;
-  document.getElementById('calc-grand-total').textContent = `$${grandTotal.toFixed(2)}`;
+  document.getElementById('calc-subtotal').textContent = `₹${subtotal.toFixed(2)}`;
+  document.getElementById('calc-tax').textContent = `₹${tax.toFixed(2)}`;
+  document.getElementById('calc-discount').textContent = `-₹${discount.toFixed(2)}`;
+  document.getElementById('calc-grand-total').textContent = `₹${grandTotal.toFixed(2)}`;
 
   return { subtotal, tax, discount, grandTotal };
 }
@@ -305,4 +305,123 @@ async function submitCreateHealthSlip() {
   } catch (err) {
     alert("Failed to issue health slip: " + err.message);
   }
+}
+
+// ==============================================================
+// MANUAL PATIENT REGISTRATION & SELECTION
+// ==============================================================
+
+function openAddPatientModal() {
+  const modal = document.getElementById('add-patient-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function closeAddPatientModal() {
+  const modal = document.getElementById('add-patient-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+async function submitManualPatientForm(event) {
+  if (event) event.preventDefault();
+  
+  const firstName = document.getElementById('new-pat-first-name')?.value?.trim();
+  const lastName = document.getElementById('new-pat-last-name')?.value?.trim() || '';
+  const phone = document.getElementById('new-pat-phone')?.value?.trim();
+  const email = document.getElementById('new-pat-email')?.value?.trim() || null;
+  const age = parseInt(document.getElementById('new-pat-age')?.value, 10) || 28;
+  const gender = document.getElementById('new-pat-gender')?.value || 'Male';
+  const blood = document.getElementById('new-pat-blood')?.value || 'O+';
+  const address = document.getElementById('new-pat-address')?.value?.trim() || '';
+  const city = document.getElementById('new-pat-city')?.value?.trim() || 'Hyderabad';
+  const state = document.getElementById('new-pat-state')?.value?.trim() || 'Telangana';
+  const pin = document.getElementById('new-pat-pin')?.value?.trim() || '500001';
+  const emergencyPhone = document.getElementById('new-pat-emergency')?.value?.trim() || phone;
+
+  if (!firstName || !phone) {
+    alert("First Name and Phone Number are required to register a patient.");
+    return;
+  }
+
+  try {
+    const payload = {
+      first_name: firstName,
+      last_name: lastName,
+      phone: phone,
+      email: email,
+      age: age,
+      gender: gender,
+      blood_group: blood,
+      address_line1: address,
+      city: city,
+      state: state,
+      postal_code: pin,
+      emergency_contact_phone: emergencyPhone
+    };
+
+    const res = await API.createPatient(payload);
+
+    if (typeof showToast === 'function') {
+      showToast(`✅ Patient ${res.full_name} registered successfully!`, 'success');
+    }
+
+    // Auto-populate into doctor prescription form
+    if (document.getElementById('doc-patient-name')) document.getElementById('doc-patient-name').value = res.full_name;
+    if (document.getElementById('doc-patient-age')) document.getElementById('doc-patient-age').value = res.age;
+    if (document.getElementById('doc-patient-gender')) document.getElementById('doc-patient-gender').value = res.gender.charAt(0).toUpperCase() + res.gender.slice(1).toLowerCase();
+    if (document.getElementById('doc-patient-phone')) document.getElementById('doc-patient-phone').value = res.phone;
+
+    closeAddPatientModal();
+    document.getElementById('add-patient-form')?.reset();
+
+    // Refresh patients dropdown
+    loadRegisteredPatientsDropdown();
+
+  } catch (err) {
+    alert("Error registering patient: " + err.message);
+  }
+}
+
+let cachedPatientsList = [];
+
+async function loadRegisteredPatientsDropdown() {
+  const select = document.getElementById('doc-patient-select');
+  if (!select) return;
+
+  try {
+    const patients = await API.getPatients();
+    cachedPatientsList = patients || [];
+
+    select.innerHTML = '<option value="">-- Or Select Existing Registered Patient --</option>' +
+      cachedPatientsList.map(p => `
+        <option value="${p.id}">${escapeHtml(p.full_name)} (${p.age}y/${p.gender}, 📞 ${p.phone})</option>
+      `).join('');
+  } catch (e) {
+    console.warn("Could not load patients list:", e);
+  }
+}
+
+function onSelectPatientFromDropdown(patientId) {
+  if (!patientId) return;
+  const p = cachedPatientsList.find(x => String(x.id) === String(patientId));
+  if (!p) return;
+
+  if (document.getElementById('doc-patient-name')) document.getElementById('doc-patient-name').value = p.full_name;
+  if (document.getElementById('doc-patient-age')) document.getElementById('doc-patient-age').value = p.age;
+  if (document.getElementById('doc-patient-gender')) document.getElementById('doc-patient-gender').value = p.gender.charAt(0).toUpperCase() + p.gender.slice(1).toLowerCase();
+  if (document.getElementById('doc-patient-phone')) document.getElementById('doc-patient-phone').value = p.phone;
+
+  if (typeof showToast === 'function') {
+    showToast(`Loaded details for patient: ${p.full_name}`, 'info');
+  }
+}
+
+// Auto-load patients dropdown on page readiness
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    loadRegisteredPatientsDropdown();
+  });
 }

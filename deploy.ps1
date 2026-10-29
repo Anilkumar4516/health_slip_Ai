@@ -57,3 +57,4 @@ if ($healthy) {
     Write-Host "⚠️ Could not verify health check. Inspecting logs:" -ForegroundColor Red
     Invoke-Expression "$composeCmd logs --tail=30 app"
 }
+

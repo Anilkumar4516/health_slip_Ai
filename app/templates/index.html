@@ -271,7 +271,7 @@
             <span style="font-size: 0.75rem; color: var(--text-muted);">Parses medicines, dosage, tests, prices & warnings</span>
           </div>
           
-          <textarea id="ai-clinical-notes-input" class="ai-textarea" placeholder="e.g. Patient Minh Nguyen, 29/M, presents with severe tension migraine. Prescribe Ibuprofen 400mg 1 pill at 12:00 am and after lunch for 5 days. Add Ibuprofen metisylat 1 pill after lunch. Advised CBC blood test and complete rest. Consultation fee $50."></textarea>
+          <textarea id="ai-clinical-notes-input" class="ai-textarea" placeholder="e.g. Patient Minh Nguyen, 29/M, presents with severe tension migraine. Prescribe Ibuprofen 400mg 1 pill at 12:00 am and after lunch for 5 days. Add Ibuprofen metisylat 1 pill after lunch. Advised CBC blood test and complete rest. Consultation fee ₹500."></textarea>
           
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <button class="btn-ai-generate" id="btn-run-ai" onclick="runAIExtraction()">
@@ -289,6 +289,23 @@
             Clinical Safety & Interaction Alerts
           </div>
           <ul id="ai-warnings-list" class="ai-alert-list"></ul>
+        </div>
+
+        <!-- Patient Selection & Manual Registration Toolbar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #f0fdfa; border: 1.5px solid #ccfbf1; padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px;">
+            <span style="font-size: 1.1rem;">👥</span>
+            <label class="input-label" style="margin: 0; white-space: nowrap; font-weight: 700; color: var(--primary);">Quick Select Patient:</label>
+            <select id="doc-patient-select" class="form-input" style="flex: 1;" onchange="onSelectPatientFromDropdown(this.value)">
+              <option value="">-- Choose Existing Registered Patient --</option>
+            </select>
+          </div>
+          <div>
+            <button type="button" class="btn-secondary" onclick="openAddPatientModal()" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-weight: 700; font-size: 0.85rem; border: 1.5px solid var(--primary); color: #0d9488; background: #ffffff; cursor: pointer; border-radius: 6px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              + Add New Patient Manually
+            </button>
+          </div>
         </div>
 
         <!-- Form: Patient & Doctor Info -->
@@ -309,7 +326,7 @@
             </div>
           </div>
           <div class="input-group">
-            <label class="input-label">Patient Phone (for OTP)</label>
+            <label class="input-label">Patient Phone (for OTP & SMS)</label>
             <input type="text" id="doc-patient-phone" class="form-input" value="+1 555-019-2834">
           </div>
         </div>
@@ -338,9 +355,9 @@
                 <tr>
                   <th style="width: 40%;">Description / Service</th>
                   <th style="width: 20%;">Type</th>
-                  <th style="width: 12%;">Unit ($)</th>
+                  <th style="width: 12%;">Unit (₹)</th>
                   <th style="width: 10%;">Qty</th>
-                  <th style="width: 12%;">Total ($)</th>
+                  <th style="width: 12%;">Total (₹)</th>
                   <th style="width: 6%;"></th>
                 </tr>
               </thead>
@@ -403,19 +420,19 @@
           <div class="totals-breakdown-col">
             <div class="total-row">
               <span>Subtotal:</span>
-              <span id="calc-subtotal">$0.00</span>
+              <span id="calc-subtotal">₹0.00</span>
             </div>
             <div class="total-row">
               <span>Tax (GST/VAT 5%):</span>
-              <span id="calc-tax">$0.00</span>
+              <span id="calc-tax">₹0.00</span>
             </div>
             <div class="total-row">
               <span>Discount / Co-Pay:</span>
-              <span id="calc-discount">-$0.00</span>
+              <span id="calc-discount">-₹0.00</span>
             </div>
             <div class="total-row grand">
               <span>Grand Total:</span>
-              <span id="calc-grand-total" style="color: var(--primary);">$0.00</span>
+              <span id="calc-grand-total" style="color: var(--primary);">₹0.00</span>
             </div>
           </div>
         </div>
@@ -478,7 +495,7 @@
           <div class="banner-icon">🌾</div>
           <div>
             <strong>Rural Seva Medical Store Mode Active (Affordability & Accessibility)</strong>
-            <p>Jan Aushadhi generic medicine substitution (Save 75-85%), Multilingual Voice Explainer (Hindi/English TTS), 2G Keypad SMS Slip, and Offline-First Local Sync Queue.</p>
+            <p>Jan Aushadhi generic medicine substitution (Save 75-85%), Multilingual Voice Explainer (Telugu/English TTS), 2G Keypad SMS Slip, and Offline-First Local Sync Queue.</p>
           </div>
         </div>
 
@@ -1058,18 +1075,18 @@
             <input type="number" id="add-med-qty" class="form-input" value="100" min="1" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Brand MRP ($) *</label>
+            <label class="form-label">Brand MRP (₹) *</label>
             <input type="number" step="0.1" id="add-med-brand-price" class="form-input" value="15.00" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Generic Price ($) *</label>
+            <label class="form-label">Generic Price (₹) *</label>
             <input type="number" step="0.1" id="add-med-generic-price" class="form-input" value="3.00" required>
           </div>
         </div>
 
         <div class="form-group" style="margin-top: 0.5rem;">
-          <label class="form-label">Vernacular Voice Dosage Advice (Hindi)</label>
-          <input type="text" id="add-med-hi" class="form-input" placeholder="e.g. सुबह और रात को भोजन के बाद 1 गोली लें">
+          <label class="form-label">Vernacular Voice Dosage Advice (Telugu - తెలుగు)</label>
+          <input type="text" id="add-med-te" class="form-input" placeholder="e.g. ఉదయం మరియు రాత్రి భోజనం తర్వాత 1 మాత్ర నీటితో తీసుకోండి">
         </div>
 
         <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
@@ -1077,6 +1094,114 @@
             Save to Pharmacy Inventory
           </button>
           <button type="button" class="btn-secondary" onclick="closeAddMedicineModal()">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       MODAL: MANUALLY REGISTER NEW PATIENT
+       ============================================================== -->
+  <div class="custom-modal-backdrop" id="add-patient-modal" style="display: none;">
+    <div class="custom-modal-dialog" style="max-width: 580px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: #ccfbf1; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+            👤
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-main);">Register New Patient Manually</h3>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Direct outpatient entry into MySQL healthslip_prod</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" onclick="closeAddPatientModal()">&times;</button>
+      </div>
+
+      <form id="add-patient-form" onsubmit="submitManualPatientForm(event)">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">First Name *</label>
+            <input type="text" id="new-pat-first-name" class="form-input" placeholder="e.g. Rajesh" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input type="text" id="new-pat-last-name" class="form-input" placeholder="e.g. Kumar">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Mobile Phone (for OTP & 2G SMS Slip) *</label>
+            <input type="text" id="new-pat-phone" class="form-input" placeholder="e.g. +91 98765 43210" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address (Optional)</label>
+            <input type="email" id="new-pat-email" class="form-input" placeholder="e.g. rajesh@example.com">
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label">Age (Years)</label>
+            <input type="number" id="new-pat-age" class="form-input" value="32" min="1" max="120">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select id="new-pat-gender" class="form-select">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Blood Group</label>
+            <select id="new-pat-blood" class="form-select">
+              <option value="O+">O+</option>
+              <option value="A+">A+</option>
+              <option value="B+">B+</option>
+              <option value="AB+">AB+</option>
+              <option value="O-">O-</option>
+              <option value="A-">A-</option>
+              <option value="B-">B-</option>
+              <option value="AB-">AB-</option>
+              <option value="UNKNOWN">UNKNOWN</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 0.5rem;">
+          <label class="form-label">Residential Address</label>
+          <input type="text" id="new-pat-address" class="form-input" placeholder="e.g. Plot 42, Sri Sai Enclave">
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" id="new-pat-city" class="form-input" value="Hyderabad">
+          </div>
+          <div class="form-group">
+            <label class="form-label">State</label>
+            <input type="text" id="new-pat-state" class="form-input" value="Telangana">
+          </div>
+          <div class="form-group">
+            <label class="form-label">PIN Code</label>
+            <input type="text" id="new-pat-pin" class="form-input" value="500001">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 0.5rem;">
+          <label class="form-label">Emergency Contact Phone</label>
+          <input type="text" id="new-pat-emergency" class="form-input" placeholder="e.g. +91 98765 00000">
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
+          <button type="submit" class="btn-ai-generate" style="flex: 1; justify-content: center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Patient & Auto-Fill Prescription Form
+          </button>
+          <button type="button" class="btn-secondary" onclick="closeAddPatientModal()">
             Cancel
           </button>
         </div>

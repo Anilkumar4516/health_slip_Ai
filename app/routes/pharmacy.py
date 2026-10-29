@@ -71,7 +71,8 @@ def add_inventory_medicine(req: AddMedicineStockRequest, db: Session = Depends(g
         unit_price_brand=req.unit_price_brand,
         unit_price_generic=req.unit_price_generic,
         savings_percent=max(0.0, savings_pct),
-        vernacular_dosage_hi=req.vernacular_dosage_hi or "भोजन के बाद पानी के साथ लें",
+        vernacular_dosage_te=req.vernacular_dosage_te or "భోజనం తర్వాత నీటితో తీసుకోండి",
+        vernacular_dosage_hi=req.vernacular_dosage_te or req.vernacular_dosage_hi or "భోజనం తర్వాత నీటితో తీసుకోండి",
         vernacular_dosage_en=req.vernacular_dosage_en or "Take after meals with water",
         visual_timing=req.visual_timing,
         is_controlled=req.is_controlled
@@ -420,13 +421,13 @@ def get_rural_sms_slip(req: RuralSmsRequest, db: Session = Depends(get_db)):
 
 @router.post("/audio-dosage")
 def get_audio_dosage_script(req: AudioDosageRequest, db: Session = Depends(get_db)):
-    """Generate localized voice/audio dosage script for rural patient illiterate support"""
+    """Generate localized voice/audio dosage script for rural patient illiterate support (Telugu / English)"""
     sub = GenericDrugService.find_generic_substitute(req.medicine_name, db)
 
-    script_hi = sub["vernacular_dosage_hi"] if sub else f"{req.medicine_name} भोजन के बाद पानी के साथ लें।"
-    script_en = sub["vernacular_dosage_en"] if sub else f"Take {req.medicine_name} after meals with water."
+    script_te = (sub.get("vernacular_dosage_te") if sub else None) or f"{req.medicine_name} భోజనం తర్వాత నీటితో తీసుకోండి."
+    script_en = (sub.get("vernacular_dosage_en") if sub else None) or f"Take {req.medicine_name} after meals with water."
 
-    text_to_speak = script_hi if req.language == "hi" else script_en
+    text_to_speak = script_te if req.language in ["te", "telugu"] else script_en
 
     return {
         "medicine_name": req.medicine_name,

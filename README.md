@@ -50,7 +50,7 @@ Inspired by modern clinical apps, HealthSlip AI bridges the gap between fast cli
   - **Cryptographic Anti-Double Dispensing Lock**: Seals dispensed prescriptions with HMAC-SHA256, mathematically preventing duplicate dispensing across different medical stores.
 - 🌾 **Rural Seva Medical Store Mode (Affordability & Accessibility)**:
   - **Jan Aushadhi Generic Medicine Cost Saver**: Automatically identifies government-certified bio-equivalent generic salts for expensive branded drugs, calculating 70% to 85% price savings for rural families with one-click generic substitution.
-  - **Vernacular Voice Dosage Explainer (Hindi & English TTS)**: Text-to-speech audio reader that speaks out clear dosage instructions in local languages for illiterate or elderly rural patients, accompanied by visual glyphs (🌅 Morning Sun, ☀️ Afternoon, 🌙 Bedtime Moon, 🍽️ Post-Meal).
+  - **Vernacular Voice Dosage Explainer (Telugu & English TTS)**: Text-to-speech audio reader that speaks out clear dosage instructions in local languages (Telugu - తెలుగు & English) for illiterate or elderly rural patients, accompanied by visual glyphs (🌅 Morning Sun, ☀️ Afternoon, 🌙 Bedtime Moon, 🍽️ Post-Meal).
   - **2G Keypad SMS Slip**: Generates concise GSM-7 compliant SMS slips (< 160 characters) tailored for basic non-smartphone keypad phones.
   - **Offline-First Synchronization**: Caches transactions locally in browser storage when rural cellular networks fail, syncing automatically when connectivity resumes.
 

@@ -61,3 +61,4 @@ else
     $DOCKER_COMPOSE logs --tail=40 app
     exit 1
 fi
+

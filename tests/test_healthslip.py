@@ -303,13 +303,13 @@ def test_rural_voice_and_sms_generation():
     assert sms_data["char_count"] <= 160
     assert sms_data["is_gsm7_compliant"] is True
 
-    # 2. Test Multilingual Audio Dosage Voice Scripts
-    audio_hi_resp = client.post("/api/pharmacy/audio-dosage", json={
+    # 2. Test Multilingual Audio Dosage Voice Scripts (Telugu & English)
+    audio_te_resp = client.post("/api/pharmacy/audio-dosage", json={
         "medicine_name": "Crocin 650mg",
-        "language": "hi"
+        "language": "te"
     })
-    assert audio_hi_resp.status_code == 200
-    assert "गोली" in audio_hi_resp.json()["speech_text"]
+    assert audio_te_resp.status_code == 200
+    assert "మాత్ర" in audio_te_resp.json()["speech_text"]
 
     audio_en_resp = client.post("/api/pharmacy/audio-dosage", json={
         "medicine_name": "Crocin 650mg",
@@ -317,6 +317,38 @@ def test_rural_voice_and_sms_generation():
     })
     assert audio_en_resp.status_code == 200
     assert "tablet" in audio_en_resp.json()["speech_text"].lower()
+
+def test_manual_patient_registration():
+    # Test manual patient creation by doctor or medical store staff
+    payload = {
+        "first_name": "Rajesh",
+        "last_name": "Kumar",
+        "phone": "+919876543210",
+        "email": "rajesh.kumar@healthslip.test",
+        "age": 34,
+        "gender": "Male",
+        "blood_group": "B+",
+        "address_line1": "Flat 302, Green Meadows",
+        "city": "Hyderabad",
+        "state": "Telangana",
+        "postal_code": "500034",
+        "emergency_contact_phone": "+919876543219"
+    }
+
+    create_resp = client.post("/api/patients", json=payload)
+    assert create_resp.status_code == 200
+    data = create_resp.json()
+    assert data["first_name"] == "Rajesh"
+    assert data["last_name"] == "Kumar"
+    assert data["blood_group"] == "B+"
+    assert data["city"] == "Hyderabad"
+    assert data["id"] is not None
+
+    # Verify patient is searchable in patients registry
+    list_resp = client.get("/api/patients?search=Rajesh")
+    assert list_resp.status_code == 200
+    patients = list_resp.json()
+    assert any(p["first_name"] == "Rajesh" for p in patients)
 
 def test_websocket_realtime_connection():
     with client.websocket_connect("/ws/live") as websocket:

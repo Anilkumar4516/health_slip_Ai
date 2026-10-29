@@ -117,7 +117,7 @@ function onNewPrescriptionReceived(data) {
   unreadPrescriptionsCount++;
   updateNavbarBadge();
 
-  showToast(`🔔 New Rx ${data.slip_number} for ${data.patient_name} ($${data.grand_total.toFixed(2)})`, 'success');
+  showToast(`🔔 New Rx ${data.slip_number} for ${data.patient_name} (₹${data.grand_total.toFixed(2)})`, 'success');
 
   // Prepend to live queue
   const newEntry = {
@@ -332,14 +332,14 @@ function renderPharmacyQueue() {
     const itemsHtml = (item.items || []).map(it => `
       <div class="queue-item-row">
         <span>💊 <strong>${escapeHtml(it.item_name)}</strong> (x${it.quantity})</span>
-        <span style="font-weight: 600;">$${it.total_price.toFixed(2)}</span>
+        <span style="font-weight: 600;">₹${it.total_price.toFixed(2)}</span>
       </div>
     `).join('');
 
     const savingsHtml = (isRural && item.generic_savings > 0) ? `
       <div class="generic-savings-badge">
         <div class="savings-tag">🌾 Jan Aushadhi Generic Savings</div>
-        <div class="savings-amount">Patient Saves $${item.generic_savings.toFixed(2)} (${item.savings_percent}% Cheaper)</div>
+        <div class="savings-amount">Patient Saves ₹${item.generic_savings.toFixed(2)} (${item.savings_percent}% Cheaper)</div>
         <div class="savings-subtext">Certified bio-equivalent generic salts available for this prescription.</div>
       </div>
     ` : '';
@@ -407,7 +407,7 @@ function renderPharmacyQueue() {
             <span class="status-badge ${isDispensed ? 'status-dispensed' : 'status-pending'}">
               ${isDispensed ? 'DISPENSED' : 'READY TO DISPENSE'}
             </span>
-            <div class="card-total-price">$${item.grand_total.toFixed(2)}</div>
+            <div class="card-total-price">₹${item.grand_total.toFixed(2)}</div>
           </div>
         </div>
 
@@ -487,9 +487,9 @@ function renderInventoryTable() {
           <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">Min: ${item.reorder_level}</div>
         </td>
         <td>
-          <div style="font-weight: 600; font-size: 0.8rem;">$${item.unit_price_brand.toFixed(2)}</div>
+          <div style="font-weight: 600; font-size: 0.8rem;">₹${item.unit_price_brand.toFixed(2)}</div>
           <div style="font-size: 0.72rem; color: var(--emerald-text); font-weight: 600;">
-            Generic: $${item.unit_price_generic.toFixed(2)} (${item.savings_percent}% off)
+            Generic: ₹${item.unit_price_generic.toFixed(2)} (${item.savings_percent}% off)
           </div>
         </td>
         <td>
@@ -529,7 +529,7 @@ async function submitNewMedicine(event) {
   const qty = parseInt(document.getElementById('add-med-qty').value, 10);
   const brandPrice = parseFloat(document.getElementById('add-med-brand-price').value);
   const genericPrice = parseFloat(document.getElementById('add-med-generic-price').value);
-  const hi = document.getElementById('add-med-hi').value;
+  const te = document.getElementById('add-med-te')?.value || document.getElementById('add-med-hi')?.value || "భోజనం తర్వాత నీటితో తీసుకోండి";
 
   try {
     const payload = {
@@ -542,7 +542,8 @@ async function submitNewMedicine(event) {
       reorder_level: 15,
       unit_price_brand: brandPrice,
       unit_price_generic: genericPrice,
-      vernacular_dosage_hi: hi || "भोजन के बाद पानी के साथ लें",
+      vernacular_dosage_te: te,
+      vernacular_dosage_hi: te,
       vernacular_dosage_en: "Take after meals with water",
       visual_timing: "AFTER_MEAL"
     };
@@ -596,8 +597,8 @@ async function openPharmacyInvoiceModal(slipNumber) {
         </td>
         <td><code>${escapeHtml(it.batch)}</code></td>
         <td style="text-align: center;">${it.quantity}</td>
-        <td>$${it.unit_price.toFixed(2)}</td>
-        <td style="font-weight: 700;">$${it.total_price.toFixed(2)}</td>
+        <td>₹${it.unit_price.toFixed(2)}</td>
+        <td style="font-weight: 700;">₹${it.total_price.toFixed(2)}</td>
       </tr>
     `).join('');
 
@@ -605,25 +606,25 @@ async function openPharmacyInvoiceModal(slipNumber) {
     document.getElementById('memo-totals-section').innerHTML = `
       <div class="thermal-totals-row">
         <span>MRP Value:</span>
-        <span>$${bill.financials.mrp_total.toFixed(2)}</span>
+        <span>₹${bill.financials.mrp_total.toFixed(2)}</span>
       </div>
       ${bill.financials.jan_aushadhi_savings > 0 ? `
         <div class="thermal-totals-row savings">
           <span>Jan Aushadhi Generic Savings:</span>
-          <span>-$${bill.financials.jan_aushadhi_savings.toFixed(2)}</span>
+          <span>-₹${bill.financials.jan_aushadhi_savings.toFixed(2)}</span>
         </div>
       ` : ''}
       <div class="thermal-totals-row">
         <span>Taxable Subtotal:</span>
-        <span>$${bill.financials.subtotal.toFixed(2)}</span>
+        <span>₹${bill.financials.subtotal.toFixed(2)}</span>
       </div>
       <div class="thermal-totals-row">
         <span>GST (${bill.financials.tax_rate}%):</span>
-        <span>$${bill.financials.tax_amount.toFixed(2)}</span>
+        <span>₹${bill.financials.tax_amount.toFixed(2)}</span>
       </div>
       <div class="thermal-totals-row grand">
         <span>NET PAYABLE:</span>
-        <span>$${bill.financials.grand_total.toFixed(2)}</span>
+        <span>₹${bill.financials.grand_total.toFixed(2)}</span>
       </div>
     `;
 
@@ -703,22 +704,29 @@ async function adjustMedicineStock(medicineId, amount) {
 // 7. VERNACULAR AUDIO DOSAGE & MULTILINGUAL TTS
 // ==============================================================
 
-async function playAudioDosage(slipNumber) {
+async function playAudioDosage(slipNumber, chosenLang) {
   const item = cachedQueue.find(q => q.slip_number === slipNumber);
-  const medName = (item && item.items && item.items[0]) ? item.items[0].item_name : 'Ibuprofen';
-  const lang = (currentStoreMode === 'RURAL') ? 'hi' : 'en';
+  const medName = (item && item.items && item.items[0]) ? item.items[0].item_name : 'Crocin 650mg';
+  const lang = chosenLang || (currentStoreMode === 'RURAL' ? 'te' : 'en');
 
   try {
     const res = await API.getAudioDosageScript(medName, lang);
     const speechText = res.speech_text;
 
-    showVoiceModal(res.medicine_name, speechText, res.timing_glyph, lang);
+    showVoiceModal(res.medicine_name, speechText, res.timing_glyph, lang, slipNumber);
 
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(speechText);
-      utterance.lang = lang === 'hi' ? 'hi-IN' : 'en-US';
-      utterance.rate = 0.9;
+      utterance.lang = lang === 'te' ? 'te-IN' : 'en-US';
+      utterance.rate = 0.88;
+
+      // Try selecting a matching Telugu voice if available on user device
+      const voices = window.speechSynthesis.getVoices();
+      if (lang === 'te') {
+        const teVoice = voices.find(v => v.lang.startsWith('te') || v.name.toLowerCase().includes('telugu'));
+        if (teVoice) utterance.voice = teVoice;
+      }
       window.speechSynthesis.speak(utterance);
     }
   } catch (err) {
@@ -726,7 +734,7 @@ async function playAudioDosage(slipNumber) {
   }
 }
 
-function showVoiceModal(medicine, text, glyph, lang) {
+function showVoiceModal(medicine, text, glyph, lang, slipNumber) {
   let modal = document.getElementById('voice-dosage-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -735,28 +743,42 @@ function showVoiceModal(medicine, text, glyph, lang) {
     document.body.appendChild(modal);
   }
 
+  const safeText = escapeHtml(text).replace(/'/g, "\\'");
+  const currentSlip = slipNumber || '';
+
   modal.innerHTML = `
     <div class="custom-modal-dialog">
       <div class="voice-modal-header">
         <div style="font-size: 2.2rem;">${glyph || '🌅'}</div>
         <div>
           <h3>🔊 Vernacular Voice Dosage Explainer</h3>
-          <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">Designed for rural patients & illiterate accessibility</p>
+          <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">Designed for rural patients & illiterate accessibility (Telugu & English)</p>
         </div>
       </div>
 
       <div class="voice-modal-body">
         <div class="voice-medicine-name">${escapeHtml(medicine)}</div>
-        <div class="voice-script-box">
+        <div class="voice-script-box" style="font-size: 1.05rem; line-height: 1.6; border-left: 4px solid var(--primary);">
           "${escapeHtml(text)}"
         </div>
-        <div class="voice-language-indicator">
-          🌐 Language: <strong>${lang === 'hi' ? 'Hindi (हिन्दी)' : 'English'}</strong>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; background: #f8fafc; padding: 8px 12px; border-radius: 6px;">
+          <div class="voice-language-indicator" style="margin: 0;">
+            🌐 Active: <strong>${lang === 'te' ? 'Telugu (తెలుగు)' : 'English'}</strong>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-voice-replay" style="padding: 4px 10px; font-size: 0.8rem; background: ${lang === 'te' ? 'var(--primary)' : '#e2e8f0'}; color: ${lang === 'te' ? '#fff' : '#1e293b'};" onclick="playAudioDosage('${currentSlip}', 'te')">
+              తెలుగు (Telugu)
+            </button>
+            <button class="btn-voice-replay" style="padding: 4px 10px; font-size: 0.8rem; background: ${lang === 'en' ? 'var(--primary)' : '#e2e8f0'}; color: ${lang === 'en' ? '#fff' : '#1e293b'};" onclick="playAudioDosage('${currentSlip}', 'en')">
+              English
+            </button>
+          </div>
         </div>
       </div>
 
       <div class="voice-modal-actions">
-        <button class="btn-voice-replay" onclick="repeatVoiceSpeech('${escapeHtml(text)}', '${lang}')">
+        <button class="btn-voice-replay" onclick="repeatVoiceSpeech('${safeText}', '${lang}')">
           🔁 Speak Again
         </button>
         <button class="btn-voice-close" onclick="closeVoiceModal()">
@@ -773,8 +795,13 @@ function repeatVoiceSpeech(text, lang) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang === 'hi' ? 'hi-IN' : 'en-US';
-    utterance.rate = 0.9;
+    utterance.lang = lang === 'te' ? 'te-IN' : 'en-US';
+    utterance.rate = 0.88;
+    const voices = window.speechSynthesis.getVoices();
+    if (lang === 'te') {
+      const teVoice = voices.find(v => v.lang.startsWith('te') || v.name.toLowerCase().includes('telugu'));
+      if (teVoice) utterance.voice = teVoice;
+    }
     window.speechSynthesis.speak(utterance);
   }
 }

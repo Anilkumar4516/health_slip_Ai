@@ -58,3 +58,4 @@ EXPOSE 8005
 
 # Run with Gunicorn Uvicorn workers in production or direct Uvicorn fallback
 CMD ["python", "main.py"]
+

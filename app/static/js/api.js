@@ -208,7 +208,7 @@ const API = {
     return this.post('/api/pharmacy/sms-slip', { slip_number: slipNumber });
   },
 
-  async getAudioDosageScript(medicineName, language = 'hi') {
+  async getAudioDosageScript(medicineName, language = 'te') {
     return this.post('/api/pharmacy/audio-dosage', { medicine_name: medicineName, language });
   },
 
@@ -225,5 +225,19 @@ const API = {
 
   async getPharmacyBill(slipNumber) {
     return this.get(`/api/pharmacy/bill/${encodeURIComponent(slipNumber)}`);
+  },
+
+  // Patient Management APIs
+  async createPatient(payload) {
+    return this.post('/api/patients', payload);
+  },
+
+  async getPatients(search = '') {
+    const q = search ? `?search=${encodeURIComponent(search)}` : '';
+    return this.get(`/api/patients${q}`);
+  },
+
+  async getPatientDetails(patientId) {
+    return this.get(`/api/patients/${encodeURIComponent(patientId)}`);
   }
 };

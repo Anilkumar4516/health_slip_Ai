@@ -20,7 +20,7 @@ class GenericDrugService:
             "unit_price_brand": 18.50,
             "unit_price_generic": 3.80,
             "savings_percent": 79.5,
-            "vernacular_dosage_hi": "सुबह और रात को भोजन के बाद 1 गोली लें। पूरा 5 दिन का कोर्स समाप्त करें।",
+            "vernacular_dosage_te": "ఉదయం మరియు రాత్రి భోజనం తర్వాత 1 మాత్ర వేసుకోండి. పూర్తి 5 రోజుల కోర్సు పూర్తి చేయండి.",
             "vernacular_dosage_en": "Take 1 tablet twice daily after meals. Complete the entire 5-day course.",
             "visual_timing": "MORNING_NIGHT",
             "is_controlled": False
@@ -36,7 +36,7 @@ class GenericDrugService:
             "unit_price_brand": 3.50,
             "unit_price_generic": 0.65,
             "savings_percent": 81.4,
-            "vernacular_dosage_hi": "बुखार या सिरदर्द होने पर 1 गोली भोजन के बाद पानी के साथ लें।",
+            "vernacular_dosage_te": "జ్వరం లేదా తలనొప్పి ఉన్నప్పుడు భోజనం తర్వాత నీటితో 1 మాత్ర తీసుకోండి.",
             "vernacular_dosage_en": "Take 1 tablet after food with water when fever or pain occurs.",
             "visual_timing": "AFTER_MEAL",
             "is_controlled": False
@@ -52,7 +52,7 @@ class GenericDrugService:
             "unit_price_brand": 12.00,
             "unit_price_generic": 2.40,
             "savings_percent": 80.0,
-            "vernacular_dosage_hi": "दर्द और सूजन के लिए 1 गोली हमेशा भोजन के बाद लें। खाली पेट न लें।",
+            "vernacular_dosage_te": "నొప్పి మరియు వాపు కొరకు ఎల్లప్పుడూ భోజనం తర్వాత నీటితో 1 మాత్ర తీసుకోండి. ఖాళీ కడుపుతో తీసుకోకూడదు.",
             "vernacular_dosage_en": "Take 1 pill after meals with water. Never take on an empty stomach.",
             "visual_timing": "AFTER_MEAL",
             "is_controlled": False
@@ -68,7 +68,7 @@ class GenericDrugService:
             "unit_price_brand": 19.00,
             "unit_price_generic": 3.20,
             "savings_percent": 83.2,
-            "vernacular_dosage_hi": "सुबह नाश्ते से आधा घंटा पहले खाली पेट 1 कैप्सूल पानी के साथ लें।",
+            "vernacular_dosage_te": "ఉదయం అల్పాహారానికి అరగంట ముందు ఖాళీ కడుపుతో 1 క్యాప్సూల్ నీటితో తీసుకోండి.",
             "vernacular_dosage_en": "Take 1 capsule on an empty stomach 30 minutes before breakfast.",
             "visual_timing": "MORNING",
             "is_controlled": False
@@ -84,7 +84,7 @@ class GenericDrugService:
             "unit_price_brand": 13.50,
             "unit_price_generic": 2.90,
             "savings_percent": 78.5,
-            "vernacular_dosage_hi": "दिन में केवल 1 बार भोजन से 1 घंटे पहले या 2 घंटे बाद 3 दिन तक लें।",
+            "vernacular_dosage_te": "రోజుకు 1 సారి మాత్రమే భోజనానికి 1 గంట ముందు లేదా 2 గంటల తర్వాత 3 రోజులు తీసుకోండి.",
             "vernacular_dosage_en": "Take once daily 1 hour before or 2 hours after meals for 3 days.",
             "visual_timing": "MORNING",
             "is_controlled": False
@@ -100,7 +100,7 @@ class GenericDrugService:
             "unit_price_brand": 11.00,
             "unit_price_generic": 1.80,
             "savings_percent": 83.6,
-            "vernacular_dosage_hi": "रात को सोने से पहले भोजन के बाद 1 गोली नियमित रूप से लें।",
+            "vernacular_dosage_te": "రాత్రి పడుకునే ముందు భోజనం తర్వాత రోజూ 1 మాత్ర తీసుకోండి.",
             "vernacular_dosage_en": "Take 1 tablet every night at bedtime after dinner.",
             "visual_timing": "NIGHT",
             "is_controlled": False
@@ -116,7 +116,7 @@ class GenericDrugService:
             "unit_price_brand": 9.50,
             "unit_price_generic": 1.90,
             "savings_percent": 80.0,
-            "vernacular_dosage_hi": "सुबह के नाश्ते के साथ या तुरंत पहले 1 गोली लें। शुगर नियंत्रित रखें।",
+            "vernacular_dosage_te": "ఉదయం అల్పాహారంతో లేదా వెంటనే ముందు 1 మాత్ర తీసుకోండి. షుగర్ నియంత్రణలో ఉంచుకోండి.",
             "vernacular_dosage_en": "Take 1 tablet with or just before your morning meal.",
             "visual_timing": "MORNING",
             "is_controlled": False
@@ -132,7 +132,7 @@ class GenericDrugService:
             "unit_price_brand": 11.50,
             "unit_price_generic": 1.40,
             "savings_percent": 87.8,
-            "vernacular_dosage_hi": "एलर्जी और छींकों के लिए रात में 1 गोली लें। हल्की नींद आ सकती है।",
+            "vernacular_dosage_te": "అలెర్జీ మరియు తుమ్ముల ఉపశమనం కోసం రాత్రి 1 మాత్ర తీసుకోండి. కొద్దిగా నిద్ర రావచ్చు.",
             "vernacular_dosage_en": "Take 1 tablet at night for allergy and sneezing relief.",
             "visual_timing": "NIGHT",
             "is_controlled": False
@@ -183,7 +183,7 @@ class GenericDrugService:
                 "unit_price_brand": s.unit_price_brand,
                 "unit_price_generic": s.unit_price_generic,
                 "savings_percent": s.savings_percent,
-                "vernacular_dosage_hi": s.vernacular_dosage_hi,
+                "vernacular_dosage_te": s.vernacular_dosage_te or "భోజనం తర్వాత నీటితో తీసుకోండి",
                 "vernacular_dosage_en": s.vernacular_dosage_en,
                 "visual_timing": s.visual_timing,
                 "is_controlled": s.is_controlled
@@ -217,7 +217,7 @@ class GenericDrugService:
                     "generic_price": s.unit_price_generic,
                     "savings_amount": savings_amount,
                     "savings_percent": s.savings_percent,
-                    "vernacular_dosage_hi": s.vernacular_dosage_hi,
+                    "vernacular_dosage_te": s.vernacular_dosage_te or "భోజనం తర్వాత నీటితో తీసుకోండి",
                     "vernacular_dosage_en": s.vernacular_dosage_en,
                     "visual_timing": s.visual_timing,
                     "batch_number": s.batch_number,
@@ -235,7 +235,7 @@ class GenericDrugService:
             "generic_price": 2.50,
             "savings_amount": 9.50,
             "savings_percent": 79.2,
-            "vernacular_dosage_hi": "भोजन के बाद 1 गोली पानी के साथ लें।",
+            "vernacular_dosage_te": "భోజనం తర్వాత నీటితో 1 మాత్ర తీసుకోండి.",
             "vernacular_dosage_en": "Take 1 tablet after meals with water.",
             "visual_timing": "AFTER_MEAL",
             "batch_number": "GEN-2026-001",
@@ -268,7 +268,7 @@ class GenericDrugService:
                     "generic_cost": generic_cost,
                     "saved": max(0.0, diff),
                     "savings_percent": sub["savings_percent"],
-                    "vernacular_hi": sub["vernacular_dosage_hi"],
+                    "vernacular_te": sub.get("vernacular_dosage_te") or "భోజనం తర్వాత నీటితో తీసుకోండి",
                     "vernacular_en": sub["vernacular_dosage_en"],
                     "visual_timing": sub["visual_timing"]
                 })

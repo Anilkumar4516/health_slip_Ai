@@ -16,7 +16,8 @@ class PharmacyMedicineStock(Base):
     unit_price_brand = Column(Float, nullable=False, default=15.0)
     unit_price_generic = Column(Float, nullable=False, default=3.0)
     savings_percent = Column(Float, default=80.0)
-    vernacular_dosage_hi = Column(String(255), default="भोजन के बाद पानी के साथ लें")
+    vernacular_dosage_te = Column(String(255), default="భోజనం తర్వాత నీటితో తీసుకోండి")
+    vernacular_dosage_hi = Column(String(255), nullable=True, default="భోజనం తర్వాత నీటితో తీసుకోండి")
     vernacular_dosage_en = Column(String(255), default="Take after meals with water")
     visual_timing = Column(String(50), default="MORNING_NIGHT") # MORNING, AFTERNOON, NIGHT, MORNING_NIGHT
     is_controlled = Column(Boolean, default=False)

@@ -175,8 +175,8 @@ class PDFService:
              Paragraph("<b>Description / Service</b>", body_style),
              Paragraph("<b>Type</b>", body_style),
              Paragraph("<b>Qty</b>", body_style),
-             Paragraph("<b>Unit ($)</b>", body_style),
-             Paragraph("<b>Total ($)</b>", body_style)]
+             Paragraph("<b>Unit (INR)</b>", body_style),
+             Paragraph("<b>Total (INR)</b>", body_style)]
         ]
 
         idx = 1
@@ -193,17 +193,17 @@ class PDFService:
                 Paragraph(f"<b>{i_name}</b>" + (f"<br/><font color='#6B7280'>{i_inst}</font>" if i_inst else ""), small_style),
                 Paragraph(i_type, small_style),
                 Paragraph(str(i_qty), small_style),
-                Paragraph(f"${i_unit:.2f}", small_style),
-                Paragraph(f"${i_total:.2f}", small_style)
+                Paragraph(f"INR {i_unit:.2f}", small_style),
+                Paragraph(f"INR {i_total:.2f}", small_style)
             ])
             idx += 1
 
         # Summary rows
-        item_rows.append(["", "", "", "", Paragraph("<b>Subtotal:</b>", small_style), Paragraph(f"${slip.subtotal:.2f}", small_style)])
-        item_rows.append(["", "", "", "", Paragraph(f"<b>Tax ({slip.tax_percent}%):</b>", small_style), Paragraph(f"${slip.tax_amount:.2f}", small_style)])
+        item_rows.append(["", "", "", "", Paragraph("<b>Subtotal:</b>", small_style), Paragraph(f"INR {slip.subtotal:.2f}", small_style)])
+        item_rows.append(["", "", "", "", Paragraph(f"<b>Tax ({slip.tax_percent}%):</b>", small_style), Paragraph(f"INR {slip.tax_amount:.2f}", small_style)])
         if slip.discount_amount > 0:
-            item_rows.append(["", "", "", "", Paragraph("<b>Discount:</b>", small_style), Paragraph(f"-${slip.discount_amount:.2f}", small_style)])
-        item_rows.append(["", "", "", "", Paragraph("<b>Grand Total:</b>", body_style), Paragraph(f"<b>${slip.grand_total:.2f}</b>", body_style)])
+            item_rows.append(["", "", "", "", Paragraph("<b>Discount:</b>", small_style), Paragraph(f"-INR {slip.discount_amount:.2f}", small_style)])
+        item_rows.append(["", "", "", "", Paragraph("<b>Grand Total:</b>", body_style), Paragraph(f"<b>INR {slip.grand_total:.2f}</b>", body_style)])
 
         items_table = Table(item_rows, colWidths=[0.3*inch, 3.4*inch, 1.2*inch, 0.5*inch, 0.9*inch, 0.9*inch])
         items_table.setStyle(TableStyle([

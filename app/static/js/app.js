@@ -155,7 +155,7 @@ async function runPublicVerification() {
           <div><b>Physician:</b> ${data.doctor_name}</div>
           <div><b>Patient (Protected):</b> ${data.patient_masked_name}</div>
           <div><b>Issued Date:</b> ${new Date(data.issued_date).toLocaleDateString()}</div>
-          <div><b>Total Amount:</b> $${data.grand_total.toFixed(2)} (${data.payment_status})</div>
+          <div><b>Total Amount:</b> ₹${data.grand_total.toFixed(2)} (${data.payment_status})</div>
         </div>
 
         <div style="font-size: 0.72rem; color: #065f46; font-family: monospace; word-break: break-all; background: white; padding: 6px; border-radius: 4px; border: 1px solid #a7f3d0;">
@@ -184,7 +184,7 @@ async function loadAnalytics() {
     const stats = await API.get('/api/stats');
     
     document.getElementById('metric-slips').textContent = stats.total_slips || 0;
-    document.getElementById('metric-revenue').textContent = `$${(stats.total_revenue || 0).toFixed(2)}`;
+    document.getElementById('metric-revenue').textContent = `₹${(stats.total_revenue || 0).toFixed(2)}`;
     document.getElementById('metric-otp-rate').textContent = `${stats.otp_success_rate || 100}%`;
     document.getElementById('metric-adherence').textContent = `${stats.adherence_rate || 0}%`;
 

@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base, SessionLocal, get_db_status
-from app.routes import receipts, otp, reminders, verification, stats, auth, pharmacy, realtime
+from app.routes import receipts, otp, reminders, verification, stats, auth, pharmacy, realtime, patients
 from app.models.receipt import Receipt
 from app.models.user import Role, User, UserRole
 from app.models.pharmacy import PharmacyMedicineStock, DispenseOrder
@@ -212,6 +212,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Include API Routers
 app.include_router(auth.router)
+app.include_router(patients.router)
 app.include_router(receipts.router)
 app.include_router(pharmacy.router)
 app.include_router(realtime.router)

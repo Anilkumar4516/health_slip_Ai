@@ -18,7 +18,7 @@ class StockAdjustRequest(BaseModel):
 class AudioDosageRequest(BaseModel):
     medicine_name: str
     schedule_time: Optional[str] = "After lunch"
-    language: str = Field("hi", description="'hi' for Hindi, 'en' for English")
+    language: str = Field("te", description="'te' for Telugu (తెలుగు), 'en' for English")
 
 class RuralSmsRequest(BaseModel):
     slip_number: str
@@ -34,7 +34,8 @@ class AddMedicineStockRequest(BaseModel):
     reorder_level: int = Field(15, description="Low stock warning threshold")
     unit_price_brand: float = Field(10.0, description="Branded market price")
     unit_price_generic: float = Field(2.0, description="Jan Aushadhi government generic price")
-    vernacular_dosage_hi: Optional[str] = "भोजन के बाद पानी के साथ लें"
+    vernacular_dosage_te: Optional[str] = "భోజనం తర్వాత నీటితో తీసుకోండి"
+    vernacular_dosage_hi: Optional[str] = "భోజనం తర్వాత నీటితో తీసుకోండి"
     vernacular_dosage_en: Optional[str] = "Take after meals with water"
     visual_timing: str = "AFTER_MEAL"
     is_controlled: bool = False

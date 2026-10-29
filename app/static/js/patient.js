@@ -238,7 +238,7 @@ function renderActiveSlipPreview(slip) {
             <tr style="border-bottom: 1px solid #f1f5f9;">
               <td style="padding: 5px 0;"><b>${it.item_name}</b></td>
               <td style="text-align: center; color: var(--text-muted);">${it.item_type}</td>
-              <td style="text-align: right; font-weight: 600;">$${(it.total_price || (it.unit_price * it.quantity)).toFixed(2)}</td>
+              <td style="text-align: right; font-weight: 600;">₹${(it.total_price || (it.unit_price * it.quantity)).toFixed(2)}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -252,7 +252,7 @@ function renderActiveSlipPreview(slip) {
         </div>
         <div style="text-align: right;">
           <div style="font-size: 0.75rem; color: var(--text-muted);">${slip.payment_status} (${slip.payment_method || 'UPI/Card'})</div>
-          <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">$${(slip.grand_total || 0).toFixed(2)}</div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">₹${(slip.grand_total || 0).toFixed(2)}</div>
         </div>
       </div>
     </div>
