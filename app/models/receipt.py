@@ -92,11 +92,13 @@ class Bill(Base):
     items = relationship("BillItem", back_populates="bill", cascade="all, delete-orphan")
     receipts = relationship("Receipt", back_populates="bill")
 
+from sqlalchemy.dialects.mysql import BIGINT as MySQL_BIGINT
+
 class BillItem(Base):
     __tablename__ = "bill_items"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    bill_id = Column(BigInteger, ForeignKey("bills.id", ondelete="CASCADE"), nullable=False)
+    id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
+    bill_id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), ForeignKey("bills.id", ondelete="CASCADE"), nullable=False)
     description = Column(String(255), nullable=False)
     quantity = Column(Integer, default=1)
     unit_price_cents = Column(Integer, nullable=False, default=0)
@@ -107,9 +109,9 @@ class BillItem(Base):
 class Receipt(Base):
     __tablename__ = "receipts"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
     receipt_number = Column(String(50), unique=True, nullable=False)
-    bill_id = Column(BigInteger, ForeignKey("bills.id", ondelete="RESTRICT"), nullable=False)
+    bill_id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), ForeignKey("bills.id", ondelete="RESTRICT"), nullable=False)
     amount_paid_cents = Column(Integer, nullable=False)
     payment_method = Column(Enum('CARD', 'UPI', 'CASH', 'NET_BANKING', 'INSURANCE', name='pay_method_enum'), default='UPI')
     gateway_transaction_id = Column(String(100), nullable=True)

@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: healthslip-ai
+    env: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: ENVIRONMENT
+        value: production
+      - key: FALLBACK_TO_SQLITE
+        value: "True"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEV_OTP_SANDBOX_MODE
+        value: "True"
+      - key: GEMINI_API_KEY
+        sync: false

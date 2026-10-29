@@ -4,10 +4,12 @@ from sqlalchemy import Column, BigInteger, SmallInteger, String, DateTime, Date,
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+from sqlalchemy.dialects.mysql import BIGINT as MySQL_BIGINT, SMALLINT as MySQL_SMALLINT
+
 class Role(Base):
     __tablename__ = "roles"
 
-    id = Column(SmallInteger, primary_key=True, autoincrement=True)
+    id = Column(SmallInteger().with_variant(MySQL_SMALLINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
     code = Column(String(32), unique=True, nullable=False)
     name = Column(String(64), nullable=False)
     description = Column(String(255), nullable=True)

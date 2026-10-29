@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+  # ============================================================================
+  # HealthSlip AI Application (FastAPI + WebSockets + Clinical UI)
+  # ============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: healthslip_app
+    restart: unless-stopped
+    ports:
+      - "8005:8005"
+    environment:
+      - ENVIRONMENT=production
+      - PROJECT_NAME=HealthSlip AI
+      - PORT=8005
+      - HOST=0.0.0.0
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - MYSQL_USER=healthslip_user
+      - MYSQL_PASSWORD=healthslip_secure_password_2026
+      - MYSQL_DB=healthslip_prod
+      - DATABASE_URL=mysql+pymysql://healthslip_user:healthslip_secure_password_2026@db:3306/healthslip_prod
+      - FALLBACK_TO_SQLITE=True
+      - SECRET_KEY=healthslip_ai_cryptographic_hmac_secret_2026_secured
+      - OTP_EXPIRY_MINUTES=5
+      - OTP_MAX_ATTEMPTS=3
+      - OTP_COOLDOWN_SECONDS=60
+      - DEV_OTP_SANDBOX_MODE=True
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - healthslip_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ============================================================================
+  # MySQL 8.0 Primary Production Relational Database
+  # ============================================================================
+  db:
+    image: mysql:8.0
+    container_name: healthslip_mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_strong_password_2026
+      - MYSQL_DATABASE=healthslip_prod
+      - MYSQL_USER=healthslip_user
+      - MYSQL_PASSWORD=healthslip_secure_password_2026
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=200
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./setup_healthslip_prod.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    networks:
+      - healthslip_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_strong_password_2026"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  mysql_data:
+    name: healthslip_mysql_data
+
+networks:
+  healthslip_net:
+    name: healthslip_network
+    driver: bridge

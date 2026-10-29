@@ -1307,7 +1307,7 @@ body {
 }
 
 .badge-role-doctor {
-  color: #2563eb !important;
+  color: var(--primary) !important;
 }
 
 .badge-role-patient {
@@ -1544,9 +1544,9 @@ body {
 }
 
 .auth-demo-btn.doctor {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border-color: var(--primary-border);
+  background: var(--primary-light);
+  color: var(--primary-dark);
 }
 
 .auth-demo-btn.patient {
@@ -1876,9 +1876,9 @@ body {
 }
 
 .mode-info-banner.urban {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e40af;
+  background: var(--primary-light);
+  border: 1px solid var(--primary-border);
+  color: var(--primary-dark);
 }
 
 .mode-info-banner.rural {
@@ -2285,8 +2285,8 @@ body {
 
 /* Security Guard Card */
 .security-guard-card {
-  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
-  border: 1.5px solid #bfdbfe;
+  background: linear-gradient(135deg, #ffffff 0%, var(--primary-light) 100%);
+  border: 1.5px solid var(--primary-border);
   margin-top: 1rem;
 }
 
@@ -2297,14 +2297,14 @@ body {
 .security-guard-card h4 {
   margin: 0;
   font-size: 0.95rem;
-  color: #1e3a8a;
+  color: var(--primary-dark);
   font-weight: 700;
 }
 
 .security-guard-card p {
   margin: 4px 0 0 0;
   font-size: 0.78rem;
-  color: #3b82f6;
+  color: var(--text-muted);
   line-height: 1.45;
 }
 

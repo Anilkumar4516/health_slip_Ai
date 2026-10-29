@@ -115,6 +115,50 @@ python -m pytest tests/test_healthslip.py -v
 
 ---
 
+## 🐳 Production Deployment Guide
+
+HealthSlip AI is containerized and cloud-ready for high-availability production environments.
+
+### Option A: 1-Click Docker Compose (FastAPI + MySQL 8.0)
+The complete production stack (multi-worker FastAPI, WebSockets hub, MySQL with persistent storage, automated schema migrations, and health checks) can be started with a single command:
+
+```bash
+# On Linux / macOS / Cloud VM:
+./deploy.sh
+
+# On Windows:
+.\deploy.ps1
+
+# Or standard Docker Compose:
+docker compose up -d --build
+```
+Once started, the application will be live at **`http://localhost:8005`**.
+
+### Option B: Cloud Platform Deployments
+
+- **Render (`render.yaml`)**:
+  Connect your GitHub repository to Render. Render will automatically detect `render.yaml` and deploy the Dockerized web service with zero manual configuration.
+- **Railway (`railway.json`)**:
+  Deploy with Railway CLI or GitHub integration:
+  ```bash
+  railway up
+  ```
+- **Fly.io (`fly.toml`)**:
+  Launch globally distributed containers:
+  ```bash
+  fly launch
+  fly deploy
+  ```
+
+### Option C: Enterprise Gunicorn Multi-Worker Execution
+For bare-metal or cloud VMs running on multiple CPU cores:
+```bash
+gunicorn -c gunicorn_conf.py main:app
+```
+*Automatically scales workers based on available CPU cores with asynchronous Uvicorn ASGI workers.*
+
+---
+
 ## 🧪 Interactive Testing Walkthrough
 
 1. **Patient App View**:
