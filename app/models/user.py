@@ -32,9 +32,13 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
+    store_id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), ForeignKey("pharmacy_stores.id", ondelete="SET NULL"), nullable=True)
+
     roles = relationship("UserRole", back_populates="user")
     practitioner = relationship("Practitioner", back_populates="user", uselist=False)
+    pharmacist = relationship("Pharmacist", back_populates="user", uselist=False)
     patient = relationship("Patient", back_populates="user", uselist=False)
+    store = relationship("PharmacyStore", back_populates="users", foreign_keys=[store_id])
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
 
 from sqlalchemy.dialects.mysql import BIGINT as MySQL_BIGINT
@@ -43,7 +47,7 @@ class UserSession(Base):
     __tablename__ = "user_sessions"
 
     id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
-    session_token = Column(String(128), unique=True, nullable=False, index=True)
+    session_token = Column(String(512), unique=True, nullable=False, index=True)
     user_id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(255), nullable=True)
@@ -126,3 +130,22 @@ class Practitioner(Base):
     @property
     def clinic_name(self) -> str:
         return f"HealthSlip AI Clinic & Seva Kendra ({self.department or 'General Medicine'})"
+
+class Pharmacist(Base):
+    __tablename__ = "pharmacists"
+
+    id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    store_id = Column(BigInteger().with_variant(MySQL_BIGINT(unsigned=True), "mysql"), ForeignKey("pharmacy_stores.id", ondelete="SET NULL"), nullable=True)
+    registration_number = Column(String(64), unique=True, nullable=False) # State Pharmacy Council Reg #
+    qualification = Column(String(100), default="B.Pharm / D.Pharm")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="pharmacist")
+    store = relationship("PharmacyStore", foreign_keys=[store_id])
+
+    @property
+    def name(self) -> str:
+        if self.user:
+            return f"Pharmacist {self.user.email.split('@')[0].title()}"
+        return "Licensed Clinical Pharmacist"

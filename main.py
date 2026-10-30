@@ -10,8 +10,8 @@ from app.config import settings
 from app.database import engine, Base, SessionLocal, get_db_status
 from app.routes import receipts, otp, reminders, verification, stats, auth, pharmacy, realtime, patients
 from app.models.receipt import Receipt
-from app.models.user import Role, User, UserRole, Practitioner, Patient
-from app.models.pharmacy import PharmacyMedicineStock, DispenseOrder
+from app.models.user import Role, User, UserRole, Practitioner, Patient, Pharmacist
+from app.models.pharmacy import PharmacyStore, PharmacyMedicineStock, DispenseOrder
 from app.schemas.receipt import HealthSlipCreate, ReceiptItemCreate, MedicationReminderCreate, PatientEmbeddedCreate
 from app.services.receipt_service import ReceiptService
 from app.services.auth_service import AuthService
@@ -190,6 +190,84 @@ def seed_initial_demo_data():
             db.flush()
             db.add(UserRole(user_id=admin.id, role_id=admin_role.id))
 
+        # Seed Default Pharmacy Stores (Urban Central & Rural Seva)
+        pharmacist_role = db.query(Role).filter(Role.code == "PHARMACIST").first()
+        if not pharmacist_role:
+            pharmacist_role = Role(code="PHARMACIST", name="Clinical Pharmacist", description="Dispenses medications and checks interactions")
+            db.add(pharmacist_role)
+            db.flush()
+
+        urban_store = db.query(PharmacyStore).filter(PharmacyStore.drug_license_number.like("%48912%")).first()
+        if not urban_store:
+            urban_store = PharmacyStore(
+                name="HealthSlip Central Pharmacy & Seva Kendra",
+                store_type="URBAN",
+                drug_license_number="20-B/TS/48912, 21-B/TS/48913",
+                gstin="36AAAAA0000A1Z5",
+                address="Door No. 4-12/A, RTC Cross Roads, Musheerabad",
+                city="Hyderabad",
+                state="Telangana",
+                postal_code="500020",
+                phone="+919876500002",
+                email="central.pharmacy@healthslip.ai",
+                is_active=True
+            )
+            db.add(urban_store)
+            db.flush()
+
+        rural_store = db.query(PharmacyStore).filter(PharmacyStore.drug_license_number.like("%98214%")).first()
+        if not rural_store:
+            rural_store = PharmacyStore(
+                name="Pradhan Mantri Jan Aushadhi Kendra (Rural Seva)",
+                store_type="RURAL",
+                drug_license_number="20-B/TS/98214, 21-B/TS/98215",
+                gstin="36BBBBB0000B1Z6",
+                address="Panchayat Bhavan Road, Parigi Mandal",
+                city="Vikarabad",
+                state="Telangana",
+                postal_code="501101",
+                phone="+919876500003",
+                email="rural.seva@healthslip.ai",
+                is_active=True
+            )
+            db.add(rural_store)
+            db.flush()
+
+        # Seed Pharmacist accounts
+        for ph_email, ph_phone, ph_reg, target_store in [
+            ("pharmacist@healthslip.ai", "+919876500002", "TSPC-2024-48912", urban_store),
+            ("rural.pharmacist@healthslip.ai", "+919876500003", "TSPC-2024-98214", rural_store)
+        ]:
+            ph = db.query(User).filter((User.email == ph_email) | (User.phone_number == ph_phone)).first()
+            if not ph and pharmacist_role:
+                ph = User(
+                    email=ph_email,
+                    phone_number=ph_phone,
+                    password_hash=AuthService.hash_password("Pharmacist@2026"),
+                    status="ACTIVE",
+                    is_phone_verified=True,
+                    is_email_verified=True,
+                    store_id=target_store.id if target_store else None
+                )
+                db.add(ph)
+                db.flush()
+                db.add(UserRole(user_id=ph.id, role_id=pharmacist_role.id))
+            elif ph:
+                if not ph.password_hash.startswith("pbkdf2_sha256$"):
+                    ph.password_hash = AuthService.hash_password("Pharmacist@2026")
+                if target_store and not ph.store_id:
+                    ph.store_id = target_store.id
+
+            if ph and not ph.pharmacist:
+                ph_record = Pharmacist(
+                    user_id=ph.id,
+                    store_id=target_store.id if target_store else None,
+                    registration_number=ph_reg,
+                    qualification="Registered Pharmacist (Pharmacy Council of India)"
+                )
+                db.add(ph_record)
+                db.flush()
+
         if doctor_role and patient_role:
             for u in db.query(User).all():
                 existing = db.query(UserRole).filter(UserRole.user_id == u.id).first()
@@ -209,6 +287,7 @@ async def lifespan(app: FastAPI):
     # Bind event loop for real-time WebSocket broadcasting
     try:
         ws_manager.set_loop(asyncio.get_running_loop())
+        await ws_manager.init_redis_if_available()
     except Exception:
         pass
 

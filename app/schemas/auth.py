@@ -13,6 +13,9 @@ class UserProfileSchema(BaseModel):
     status: str = "ACTIVE"
     practitioner_license: Optional[str] = None
     practitioner_specialization: Optional[str] = None
+    store_id: Optional[int] = None
+    store_name: Optional[str] = None
+    pharmacist_registration: Optional[str] = None
     last_login_at: Optional[datetime.datetime] = None
     created_at: Optional[datetime.datetime] = None
 
@@ -30,16 +33,22 @@ class RegisterRequest(BaseModel):
     email: str = Field(..., min_length=5, max_length=191, description="Unique email address")
     phone_number: str = Field(..., min_length=6, max_length=20, description="Unique mobile number")
     password: str = Field(..., min_length=6, max_length=128, description="Secure user password")
-    role_code: str = Field("PATIENT", description="DOCTOR, PATIENT, or ADMIN")
+    role_code: str = Field("PATIENT", description="DOCTOR, PHARMACIST, PATIENT, or ADMIN")
     gender: Optional[str] = Field("Male", description="Male, Female, Other")
     date_of_birth: Optional[str] = Field(None, description="Date of birth YYYY-MM-DD")
     doctor_license: Optional[str] = Field(None, description="Medical license number if doctor")
     doctor_specialization: Optional[str] = Field("General Medicine", description="Specialization if doctor")
+    store_id: Optional[int] = Field(None, description="Store ID if pharmacist")
+    pharmacist_registration: Optional[str] = Field(None, description="Pharmacy council registration number if pharmacist")
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., description="Valid refresh token")
 
 class AuthResponse(BaseModel):
     success: bool
     message: str
     access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     expires_in_seconds: Optional[int] = None
     user: Optional[UserProfileSchema] = None

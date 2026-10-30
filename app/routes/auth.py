@@ -7,12 +7,14 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 
 from app.database import get_db
-from app.models.user import User, Role, UserRole, Practitioner, Patient, UserSession
+from app.models.user import User, Role, UserRole, Practitioner, Patient, UserSession, Pharmacist
+from app.models.pharmacy import PharmacyStore
 from app.models.verification import AuditEvent
 from app.schemas.auth import (
     LoginRequest,
     OtpLoginRequest,
     RegisterRequest,
+    RefreshTokenRequest,
     AuthResponse,
     SessionStatusResponse,
     UserProfileSchema,
@@ -39,7 +41,7 @@ async def login(payload: LoginRequest, request: Request, response: Response, db:
     client_ip = request.client.host if request.client else "127.0.0.1"
     user_agent = request.headers.get("User-Agent", "Unknown Client")
 
-    success, msg, token, profile = AuthService.authenticate_by_credentials(
+    success, msg, access_token, refresh_token, profile = AuthService.authenticate_by_credentials(
         db=db,
         email_or_phone=payload.email_or_phone,
         password=payload.password,
@@ -48,7 +50,7 @@ async def login(payload: LoginRequest, request: Request, response: Response, db:
         remember_me=payload.remember_me
     )
 
-    if not success or not token:
+    if not success or not access_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=msg
@@ -58,7 +60,7 @@ async def login(payload: LoginRequest, request: Request, response: Response, db:
     max_age = 30 * 86400 if payload.remember_me else 86400
     response.set_cookie(
         key="healthslip_session",
-        value=token,
+        value=access_token,
         max_age=max_age,
         httponly=True,
         samesite="lax",
@@ -77,9 +79,32 @@ async def login(payload: LoginRequest, request: Request, response: Response, db:
     return AuthResponse(
         success=True,
         message="Login successful. Secure session established.",
-        access_token=token,
+        access_token=access_token,
+        refresh_token=refresh_token,
         token_type="bearer",
         expires_in_seconds=max_age,
+        user=profile
+    )
+
+@router.post("/refresh", response_model=AuthResponse)
+def refresh_token_endpoint(payload: RefreshTokenRequest, db: Session = Depends(get_db)):
+    """
+    Exchange valid refresh token for a newly issued short-lived access JWT token.
+    """
+    success, msg, new_access_token, profile = AuthService.refresh_access_token(db, payload.refresh_token)
+    if not success or not new_access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=msg
+        )
+
+    return AuthResponse(
+        success=True,
+        message="Access token refreshed successfully.",
+        access_token=new_access_token,
+        refresh_token=payload.refresh_token,
+        token_type="bearer",
+        expires_in_seconds=AuthService.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user=profile
     )
 
@@ -228,6 +253,19 @@ async def register(payload: RegisterRequest, request: Request, response: Respons
             department="Clinical Medicine"
         )
         db.add(practitioner)
+    elif role_code == "PHARMACIST":
+        reg_num = payload.pharmacist_registration or f"PHAR-2026-{new_user.id:04d}"
+        if payload.store_id:
+            new_user.store_id = payload.store_id
+        pharmacist = Pharmacist(
+            user_id=new_user.id,
+            store_id=payload.store_id,
+            registration_number=reg_num,
+            qualification="B.Pharm / Registered Pharmacist"
+        )
+        db.add(pharmacist)
+    elif role_code == "ADMIN":
+        pass
     else:
         # Patient
         gender_val = payload.gender.upper() if payload.gender and payload.gender.upper() in ('MALE', 'FEMALE', 'OTHER') else 'UNDISCLOSED'
@@ -249,8 +287,8 @@ async def register(payload: RegisterRequest, request: Request, response: Respons
 
     db.commit()
 
-    # Automatically create session
-    session_rec, token = AuthService.create_session(
+    # Automatically create session with JWT tokens
+    session_rec, access_token, refresh_token = AuthService.create_session(
         db=db,
         user=new_user,
         ip_address=client_ip,
@@ -261,7 +299,7 @@ async def register(payload: RegisterRequest, request: Request, response: Respons
 
     response.set_cookie(
         key="healthslip_session",
-        value=token,
+        value=access_token,
         max_age=86400,
         httponly=True,
         samesite="lax",
@@ -278,7 +316,8 @@ async def register(payload: RegisterRequest, request: Request, response: Respons
     return AuthResponse(
         success=True,
         message="Account registered successfully. Signed in.",
-        access_token=token,
+        access_token=access_token,
+        refresh_token=refresh_token,
         token_type="bearer",
         expires_in_seconds=86400,
         user=profile

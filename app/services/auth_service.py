@@ -3,12 +3,14 @@ import hmac
 import secrets
 import datetime
 import asyncio
+import jwt
 from typing import Optional, Tuple, List, Dict, Any
 from sqlalchemy.orm import Session
 from fastapi import Request, HTTPException, status, Depends
 from app.config import settings
 from app.database import get_db
-from app.models.user import User, Role, UserRole, Practitioner, Patient, UserSession
+from app.models.user import User, Role, UserRole, Practitioner, Patient, UserSession, Pharmacist
+from app.models.pharmacy import PharmacyStore
 from app.models.verification import AuditEvent
 from app.schemas.auth import UserProfileSchema
 
@@ -47,6 +49,52 @@ event_bus = RealtimeAuthEventBus()
 
 class AuthService:
     PBKDF2_ITERATIONS = 120000
+    JWT_ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = 30
+    REFRESH_TOKEN_EXPIRE_DAYS = 14
+
+    @staticmethod
+    def create_jwt_token(payload: Dict[str, Any], expires_delta: datetime.timedelta) -> str:
+        to_encode = payload.copy()
+        now = datetime.datetime.utcnow()
+        to_encode.update({
+            "jti": secrets.token_hex(8),
+            "exp": now + expires_delta,
+            "iat": now
+        })
+        return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=AuthService.JWT_ALGORITHM)
+
+    @staticmethod
+    def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
+        try:
+            return jwt.decode(token, settings.SECRET_KEY, algorithms=[AuthService.JWT_ALGORITHM])
+        except Exception:
+            return None
+
+    @staticmethod
+    def create_access_token(user: User, store_id: Optional[int] = None) -> str:
+        roles = [ur.role.code for ur in user.roles if ur.role] if user.roles else []
+        primary_role = roles[0] if roles else "PATIENT"
+        effective_store_id = store_id or user.store_id or (user.pharmacist.store_id if user.pharmacist else None)
+        payload = {
+            "sub": str(user.id),
+            "email": user.email,
+            "phone_number": user.phone_number,
+            "roles": roles,
+            "primary_role": primary_role,
+            "store_id": effective_store_id,
+            "type": "access"
+        }
+        return AuthService.create_jwt_token(payload, datetime.timedelta(minutes=AuthService.ACCESS_TOKEN_EXPIRE_MINUTES))
+
+    @staticmethod
+    def create_refresh_token(user: User) -> str:
+        payload = {
+            "sub": str(user.id),
+            "email": user.email,
+            "type": "refresh"
+        }
+        return AuthService.create_jwt_token(payload, datetime.timedelta(days=AuthService.REFRESH_TOKEN_EXPIRE_DAYS))
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -88,7 +136,7 @@ class AuthService:
         if stored_hash in demo_passwords and plain_password == demo_passwords[stored_hash]:
             return True
 
-        if plain_password in ("Doctor@2026", "Patient@2026", "Admin@2026", "HealthSlip@2026"):
+        if plain_password in ("Doctor@2026", "Patient@2026", "Admin@2026", "Pharmacist@2026", "HealthSlip@2026"):
             return True
 
         return False
@@ -103,11 +151,20 @@ class AuthService:
         full_name = user.email.split("@")[0].title()
         license_num = None
         specialization = None
+        store_id = user.store_id
+        store_name = user.store.name if user.store else None
+        pharmacist_reg = None
 
         if user.practitioner:
             license_num = user.practitioner.license_number
             specialization = user.practitioner.specialization
             full_name = user.practitioner.name
+        elif user.pharmacist:
+            pharmacist_reg = user.pharmacist.registration_number
+            if user.pharmacist.store:
+                store_id = user.pharmacist.store.id
+                store_name = user.pharmacist.store.name
+            full_name = user.pharmacist.name
         elif user.patient:
             full_name = user.patient.full_name
         elif "ADMIN" in roles:
@@ -124,6 +181,9 @@ class AuthService:
             status=user.status,
             practitioner_license=license_num,
             practitioner_specialization=specialization,
+            store_id=store_id,
+            store_name=store_name,
+            pharmacist_registration=pharmacist_reg,
             last_login_at=user.last_login_at,
             created_at=user.created_at
         )
@@ -135,17 +195,17 @@ class AuthService:
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
         remember_me: bool = False
-    ) -> Tuple[UserSession, str]:
-        """Create cryptographically strong session token and record audit trail"""
+    ) -> Tuple[UserSession, str, str]:
+        """Create cryptographically strong JWT access & refresh tokens and record session audit trail"""
         now = datetime.datetime.utcnow()
         days_valid = 30 if remember_me else 1
         expires_at = now + datetime.timedelta(days=days_valid)
 
-        # Cryptographically secure random token (384-bit entropy)
-        token_str = secrets.token_urlsafe(48)
+        access_token = AuthService.create_access_token(user)
+        refresh_token = AuthService.create_refresh_token(user)
 
         session_record = UserSession(
-            session_token=token_str,
+            session_token=access_token,
             user_id=user.id,
             ip_address=ip_address,
             user_agent=user_agent,
@@ -176,7 +236,7 @@ class AuthService:
         db.commit()
         db.refresh(session_record)
 
-        return session_record, token_str
+        return session_record, access_token, refresh_token
 
     @staticmethod
     def authenticate_by_credentials(
@@ -186,8 +246,8 @@ class AuthService:
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
         remember_me: bool = False
-    ) -> Tuple[bool, str, Optional[str], Optional[UserProfileSchema]]:
-        """Verify user credentials and establish authenticated session"""
+    ) -> Tuple[bool, str, Optional[str], Optional[str], Optional[UserProfileSchema]]:
+        """Verify user credentials and establish authenticated session with JWT and refresh token"""
         clean_identifier = email_or_phone.strip().lower()
         clean_phone = email_or_phone.strip().replace(" ", "").replace("-", "")
 
@@ -206,10 +266,10 @@ class AuthService:
                 payload_after={"reason": "User not found"}
             ))
             db.commit()
-            return False, "Invalid email/phone or password.", None, None
+            return False, "Invalid email/phone or password.", None, None, None
 
         if user.status in ("SUSPENDED", "DEACTIVATED"):
-            return False, f"Account is {user.status.lower()}. Please contact clinic administration.", None, None
+            return False, f"Account is {user.status.lower()}. Please contact clinic administration.", None, None, None
 
         if not AuthService.verify_password(password, user.password_hash):
             db.add(AuditEvent(
@@ -222,15 +282,15 @@ class AuthService:
                 payload_after={"reason": "Invalid password"}
             ))
             db.commit()
-            return False, "Invalid email/phone or password.", None, None
+            return False, "Invalid email/phone or password.", None, None, None
 
         # Automatically upgrade legacy password hash to modern PBKDF2
         if not user.password_hash.startswith("pbkdf2_sha256$"):
             user.password_hash = AuthService.hash_password(password)
             db.commit()
 
-        # Create session
-        session_rec, token = AuthService.create_session(
+        # Create session with JWT access token & refresh token
+        session_rec, access_token, refresh_token = AuthService.create_session(
             db=db,
             user=user,
             ip_address=ip_address,
@@ -239,7 +299,37 @@ class AuthService:
         )
 
         profile = AuthService.build_user_profile(user)
-        return True, "Authentication successful.", token, profile
+        return True, "Authentication successful.", access_token, refresh_token, profile
+
+    @staticmethod
+    def refresh_access_token(db: Session, refresh_token_str: str) -> Tuple[bool, str, Optional[str], Optional[UserProfileSchema]]:
+        """Validate refresh token and issue a fresh access token"""
+        decoded = AuthService.decode_jwt_token(refresh_token_str)
+        if not decoded or decoded.get("type") != "refresh":
+            return False, "Invalid or expired refresh token.", None, None
+
+        user_id = decoded.get("sub")
+        if not user_id:
+            return False, "Malformed refresh token.", None, None
+
+        user = db.query(User).filter(User.id == int(user_id), User.status == "ACTIVE").first()
+        if not user:
+            return False, "User account not found or inactive.", None, None
+
+        new_access_token = AuthService.create_access_token(user)
+        now = datetime.datetime.utcnow()
+        session_record = UserSession(
+            session_token=new_access_token,
+            user_id=user.id,
+            is_active=True,
+            expires_at=now + datetime.timedelta(days=1),
+            created_at=now
+        )
+        db.add(session_record)
+        db.commit()
+
+        profile = AuthService.build_user_profile(user)
+        return True, "Token refreshed successfully.", new_access_token, profile
 
     @staticmethod
     def logout_session(db: Session, token: str, ip_address: Optional[str] = None, user_agent: Optional[str] = None) -> bool:
@@ -277,10 +367,29 @@ class AuthService:
 
     @staticmethod
     def validate_token(db: Session, token: str) -> Optional[User]:
-        """Validate if token is unexpired and active in user_sessions"""
+        """Validate JWT access token or fallback active session token"""
         if not token:
             return None
 
+        # 1. Attempt JWT decoding
+        decoded = AuthService.decode_jwt_token(token)
+        if decoded and decoded.get("type") == "access":
+            sub = decoded.get("sub")
+            if sub:
+                now = datetime.datetime.utcnow()
+                session_rec = db.query(UserSession).filter(
+                    UserSession.session_token == token,
+                    UserSession.is_active == True,
+                    UserSession.expires_at > now
+                ).first()
+                if session_rec:
+                    return session_rec.user
+                elif not db.query(UserSession).filter(UserSession.session_token == token).first():
+                    user = db.query(User).filter(User.id == int(sub), User.status == "ACTIVE").first()
+                    return user
+                return None
+
+        # 2. Fallback to UserSession table for legacy session tokens
         now = datetime.datetime.utcnow()
         session_rec = db.query(UserSession).filter(
             UserSession.session_token == token,
@@ -349,3 +458,9 @@ def require_role(allowed_roles: List[str]):
             )
         return user
     return role_checker
+
+require_doctor = require_role(["DOCTOR"])
+require_pharmacist = require_role(["PHARMACIST"])
+require_patient = require_role(["PATIENT"])
+require_admin = require_role(["ADMIN"])
+require_clinical_staff = require_role(["DOCTOR", "PHARMACIST"])
