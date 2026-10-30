@@ -3,6 +3,8 @@
 let currentStoreMode = 'URBAN'; // 'URBAN' or 'RURAL'
 let realtimeSocket = null;
 let realtimeReconnectTimer = null;
+let realtimeHeartbeatTimer = null;
+let reconnectBackoffMs = 2000;
 let unreadPrescriptionsCount = 0;
 let cachedQueue = [];
 let cachedInventory = [];
@@ -19,11 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==============================================================
 // 1. REAL-TIME WEBSOCKET SYNCHRONIZATION (REDIS / SCALED HUB)
 // ==============================================================
-
-let realtimeSocket = null;
-let realtimeReconnectTimer = null;
-let realtimeHeartbeatTimer = null;
-let reconnectBackoffMs = 2000;
 
 function initRealtimeWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
