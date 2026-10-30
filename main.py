@@ -284,6 +284,29 @@ def seed_initial_demo_data():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Fail fast at startup if production security secrets or DB configurations are insecure
+    if settings.ENVIRONMENT.lower() == "production":
+        default_dev_secrets = [
+            "healthslip_ai_cryptographic_hmac_secret_2026_secured",
+            "default",
+            "secret",
+            "changeme"
+        ]
+        if not settings.SECRET_KEY or settings.SECRET_KEY in default_dev_secrets or len(settings.SECRET_KEY) < 32:
+            raise RuntimeError(
+                "FATAL PRODUCTION CONFIGURATION ERROR: SECRET_KEY must be set to a cryptographically secure, "
+                "unique key of at least 32 characters in production."
+            )
+        if not settings.MYSQL_PASSWORD or settings.MYSQL_PASSWORD in ("root", "password", "admin"):
+            raise RuntimeError(
+                "FATAL PRODUCTION CONFIGURATION ERROR: In production, default MySQL database passwords are strictly prohibited."
+            )
+        if settings.FALLBACK_TO_SQLITE:
+            raise RuntimeError(
+                "FATAL PRODUCTION CONFIGURATION ERROR: SQLite fallback is strictly prohibited in production. "
+                "Production must run against verified MySQL database."
+            )
+
     # Bind event loop for real-time WebSocket broadcasting
     try:
         ws_manager.set_loop(asyncio.get_running_loop())
@@ -315,10 +338,31 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS
+# Production Security Headers Middleware (X-Frame-Options, CSP, HSTS, X-Content-Type)
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if settings.ENVIRONMENT.lower() == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; "
+            "img-src 'self' data: https: blob:; "
+            "font-src 'self' data: https:;"
+        )
+    return response
+
+# CORS with production domain restrictions
+allowed_origins = [o.strip() for o in settings.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
+if "*" in allowed_origins and settings.ENVIRONMENT.lower() == "production":
+    allowed_origins = ["https://healthslip.ai", "http://localhost:8005", "http://127.0.0.1:8005"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins if allowed_origins else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -351,6 +395,21 @@ def health_check():
         "dev_sandbox_otp": settings.DEV_OTP_SANDBOX_MODE,
         "timestamp": datetime.datetime.utcnow().isoformat()
     }
+
+@app.get("/api/ready")
+def readiness_probe():
+    """Readiness probe for zero-downtime rolling deployments and container health orchestration"""
+    db_status = get_db_status()
+    return {
+        "status": "ready",
+        "database": db_status,
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
+
+@app.get("/privacy", response_class=HTMLResponse)
+def serve_privacy_policy():
+    """India DPDP Act 2023 Statutory Privacy Policy and Data Principal Charter"""
+    return FileResponse("app/templates/privacy.html")
 
 @app.get("/", response_class=HTMLResponse)
 def serve_index():

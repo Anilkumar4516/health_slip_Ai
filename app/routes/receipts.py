@@ -84,6 +84,17 @@ def get_receipt_details(slip_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Medical receipt not found.")
 
     slip_dict = ReceiptService.build_slip_view_model(receipt.bill, receipt)
+    # Audit log receipt view
+    try:
+        db.add(AuditEvent(
+            action="VIEW_RECEIPT",
+            resource_type="receipts",
+            resource_id=receipt.receipt_number,
+            payload_after={"receipt_id": receipt.id}
+        ))
+        db.commit()
+    except Exception:
+        pass
     return HealthSlipResponse(**slip_dict)
 
 @router.get("/{slip_id}/pdf")

@@ -22,11 +22,18 @@ class ReceiptService:
         rand_id = random.randint(10000, 99999)
         return f"HSL-{year}-{rand_id}"
 
+    KEY_REGISTRY = {
+        "v1": settings.SECRET_KEY,
+        "v0": "healthslip_ai_cryptographic_hmac_secret_2026_secured"
+    }
+
     @staticmethod
-    def calculate_verification_hash(slip_number: str, patient_phone: str, grand_total: float, visit_date_iso: str) -> str:
-        """Compute cryptographic HMAC-SHA256 signature to guarantee slip immutability"""
+    def calculate_verification_hash(slip_number: str, patient_phone: str, grand_total: float, visit_date_iso: str, key_id: Optional[str] = None) -> str:
+        """Compute cryptographic HMAC-SHA256 signature with key rotation versioning (v1, v2)"""
+        kid = key_id or getattr(settings, "HMAC_KEY_VERSION", "v1")
+        secret = ReceiptService.KEY_REGISTRY.get(kid, settings.SECRET_KEY)
         payload = f"{slip_number}|{patient_phone}|{grand_total:.2f}|{visit_date_iso}".encode("utf-8")
-        return hmac.new(settings.SECRET_KEY.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+        return hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
 
     @staticmethod
     def generate_qr_code_base64(verification_url: str) -> str:
@@ -417,14 +424,23 @@ class ReceiptService:
         patient_phone = bill.patient.phone if bill and bill.patient else ""
         grand_total = bill.total_cents / 100.0
 
+        stored_hash = receipt.gateway_transaction_id or ""
+        key_id = "v1"
+        stored_raw = stored_hash
+        if "$" in stored_hash:
+            parts = stored_hash.split("$", 1)
+            key_id = parts[0]
+            stored_raw = parts[1]
+
         expected_hash = ReceiptService.calculate_verification_hash(
             slip_number=receipt.receipt_number,
             patient_phone=patient_phone.replace(" ", "").replace("-", ""),
             grand_total=grand_total,
-            visit_date_iso=receipt.created_at.strftime("%Y-%m-%d")
+            visit_date_iso=receipt.created_at.strftime("%Y-%m-%d"),
+            key_id=key_id
         )
 
-        is_tamper_free = hmac.compare_digest(expected_hash, receipt.gateway_transaction_id or "")
+        is_tamper_free = hmac.compare_digest(expected_hash, stored_raw) or hmac.compare_digest(expected_hash, stored_hash)
 
         practitioner = bill.prescription.practitioner if bill and bill.prescription else None
 

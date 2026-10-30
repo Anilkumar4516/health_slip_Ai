@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy & DPDP Act Compliance | HealthSlip AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B1120;
+      --card-bg: #111827;
+      --border: #1F2937;
+      --primary: #0284C7;
+      --primary-hover: #0369A1;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --accent-green: #10B981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    h1 { font-size: 28px; font-weight: 700; color: #FFFFFF; margin-bottom: 8px; }
+    .updated-date { font-size: 13px; color: var(--text-muted); }
+    h2 { font-size: 20px; font-weight: 600; color: #38BDF8; margin-top: 32px; margin-bottom: 12px; }
+    p { margin-bottom: 16px; color: #CBD5E1; font-size: 15px; }
+    ul { margin-left: 20px; margin-bottom: 16px; color: #CBD5E1; }
+    li { margin-bottom: 8px; font-size: 14px; }
+    .callout {
+      background: rgba(2, 132, 199, 0.08);
+      border-left: 4px solid var(--primary);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 24px 0;
+    }
+    .callout h3 { font-size: 16px; color: #7DD3FC; margin-bottom: 6px; }
+    .callout p { margin: 0; font-size: 14px; }
+    .btn-back {
+      display: inline-block;
+      margin-top: 32px;
+      background: var(--primary);
+      color: #FFFFFF;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    .btn-back:hover { background: var(--primary-hover); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="badge">🛡️ India DPDP Act 2023 Compliant</div>
+      <h1>Privacy Policy & Data Protection Standards</h1>
+      <div class="updated-date">Effective Date: October 2026 | Version 2.0 (Pilots in Indian Retail Pharmacies)</div>
+    </div>
+
+    <p>HealthSlip AI ("we", "us", or "our") operates as a secure digital prescription, clinical verification, and pharmacy management platform. We are committed to safeguarding personal health data in strict compliance with the <b>Digital Personal Data Protection Act, 2023 (DPDP Act)</b>, the <b>Information Technology Act, 2000</b>, and applicable Pharmacy Practice Regulations in India.</p>
+
+    <h2>1. Data Principal Rights (DPDP Act, 2023)</h2>
+    <p>Under the DPDP Act 2023, every patient whose data is processed through HealthSlip AI is recognized as a <b>Data Principal</b> with the following enforceable statutory rights:</p>
+    <ul>
+      <li><b>Right to Access & Summary (Section 11):</b> You have the right to obtain a summary of all health slips, active prescriptions, and personal identifiers processed by HealthSlip AI.</li>
+      <li><b>Right to Correction & Erasure (Section 12):</b> You can request the correction of inaccurate medical demographics or exercise your "Right to be Forgotten" via our automated <code>/api/patients/{id}/erase-data</code> endpoint.</li>
+      <li><b>Right of Grievance Redressal (Section 13):</b> You may register grievances regarding data processing with our Data Protection Officer, who must respond within statutory timelines.</li>
+      <li><b>Right to Nominate (Section 14):</b> In the event of death or incapacity, you have the right to nominate an individual to exercise rights on your behalf.</li>
+    </ul>
+
+    <div class="callout">
+      <h3>🔒 Patient Data Encryption at Rest & Safe Transit</h3>
+      <p>All sensitive patient identifiers (names, mobile numbers, diagnosis notes) are encrypted at rest using AES-128-CBC authenticated Fernet encryption. External AI clinical assistance calls strictly strip all personally identifiable markers (names, phone numbers, postal addresses) before data processing.</p>
+    </div>
+
+    <h2>2. Categories of Data Collected & Purpose</h2>
+    <p>We process personal data solely for healthcare delivery purposes:</p>
+    <ul>
+      <li><b>Clinical Demographics:</b> Full Name, Age, Gender, Mobile Number for issuing verified prescriptions and medication reminders.</li>
+      <li><b>Prescription & Dispensing Records:</b> Prescribed medications, dosage instructions, Jan Aushadhi generic substitutions, and dispensing counter audit logs (Drugs and Cosmetics Rules compliance).</li>
+      <li><b>Authentication & Verification Data:</b> Salted HMAC-SHA256 hashed OTPs for secure patient access without passwords.</li>
+    </ul>
+
+    <h2>3. Audit Logging & Security Accountability</h2>
+    <p>HealthSlip AI maintains an immutable tamper-evident Audit Log (<code>audit_events</code>) capturing all key actions including user authentication, OTP verification, prescription issuance, cryptographic sealing, pharmacy dispensing, and DPDP erasure requests.</p>
+
+    <h2>4. Grievance Redressal & Contact Officer</h2>
+    <p>For inquiries regarding data protection, consent withdrawal, or right-to-erasure requests, please contact our designated Data Protection Officer:</p>
+    <p>
+      <b>Data Protection Officer (DPO) & Compliance Desk</b><br/>
+      HealthSlip AI Healthcare Technologies Pvt. Ltd.<br/>
+      Email: <code>privacy@healthslip.ai</code> / <code>dpo@healthslip.ai</code><br/>
+      Address: RTC Cross Roads, Hyderabad, Telangana, India - 500020
+    </p>
+
+    <a href="/" class="btn-back">← Back to HealthSlip AI Portal</a>
+  </div>
+</body>
+</html>

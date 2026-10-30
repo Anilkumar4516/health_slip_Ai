@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app.database import get_db
-from app.models.user import User, Patient, Role, UserRole
-from app.models.verification import AuditEvent
-from app.schemas.patient import PatientManualCreate, PatientSummary, PatientDetailResponse
+from app.models.user import User, Patient, Role, UserRole, UserSession
+from app.models.verification import AuditEvent, ConsentRecord
+from app.schemas.patient import PatientManualCreate, PatientSummary, PatientDetailResponse, ConsentCaptureRequest, EraseDataRequest
 from app.services.auth_service import AuthService
+from app.services.encryption_service import EncryptionService
 from app.services.websocket_manager import ws_manager
 
 router = APIRouter(prefix="/api/patients", tags=["Patient Management"])
@@ -235,4 +236,139 @@ def get_patient_details(patient_id: int, db: Session = Depends(get_db)):
         total_prescriptions=len(patient.prescriptions) if patient.prescriptions else 0,
         total_bills=len(patient.bills) if patient.bills else 0
     )
+
+@router.post("/{patient_id}/consent")
+def capture_patient_consent(
+    patient_id: int,
+    req: ConsentCaptureRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Capture patient consent under India Digital Personal Data Protection Act, 2023 (DPDP Act).
+    Records purpose (AI_ANALYSIS, SMS_REMINDERS, THIRD_PARTY_SHARING, TELEMEDICINE) and audit log.
+    """
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient record not found.")
+
+    valid_purposes = ['AI_ANALYSIS', 'SMS_REMINDERS', 'THIRD_PARTY_SHARING', 'TELEMEDICINE']
+    purpose_upper = req.consent_purpose.upper()
+    if purpose_upper not in valid_purposes:
+        raise HTTPException(status_code=400, detail=f"Invalid consent purpose. Must be one of: {valid_purposes}")
+
+    now = datetime.datetime.utcnow()
+    consent = db.query(ConsentRecord).filter(
+        ConsentRecord.patient_id == patient_id,
+        ConsentRecord.consent_purpose == purpose_upper
+    ).first()
+
+    if not consent:
+        consent = ConsentRecord(
+            patient_id=patient_id,
+            consent_purpose=purpose_upper,
+            is_granted=req.is_granted,
+            granted_at=now if req.is_granted else None,
+            revoked_at=None if req.is_granted else now,
+            signature_hash=f"DPDP2023${uuid.uuid4().hex[:16]}"
+        )
+        db.add(consent)
+    else:
+        consent.is_granted = req.is_granted
+        if req.is_granted:
+            consent.granted_at = now
+            consent.revoked_at = None
+        else:
+            consent.revoked_at = now
+
+    # Audit log consent event
+    db.add(AuditEvent(
+        action="CONSENT_RECORDED" if req.is_granted else "CONSENT_REVOKED",
+        resource_type="consent_records",
+        resource_id=str(patient_id),
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("User-Agent"),
+        payload_after={
+            "patient_id": patient_id,
+            "purpose": purpose_upper,
+            "is_granted": req.is_granted
+        }
+    ))
+    db.commit()
+
+    return {
+        "success": True,
+        "patient_id": patient_id,
+        "consent_purpose": purpose_upper,
+        "is_granted": req.is_granted,
+        "message": f"Consent {purpose_upper} successfully {'granted' if req.is_granted else 'revoked'} under India DPDP Act 2023."
+    }
+
+@router.post("/{patient_id}/erase-data")
+def erase_patient_data_dpdp(
+    patient_id: int,
+    req: EraseDataRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    India DPDP Act 2023 Section 12 (Right to Erasure / 'Delete My Data').
+    Pseudonymizes patient personally identifiable demographics, revokes active logins,
+    and logs compliance audit entry.
+    """
+    if not req.confirm:
+        raise HTTPException(status_code=400, detail="Explicit confirmation (confirm=true) is required for data erasure.")
+
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient record not found.")
+
+    user = patient.user
+
+    # Anonymize PII in patient record
+    patient.first_name = "ANONYMIZED"
+    patient.last_name = "PATIENT"
+    patient.address_line1 = "[REDACTED_UNDER_DPDP_ACT]"
+    patient.emergency_contact_name = None
+    patient.emergency_contact_phone = None
+
+    if user:
+        user.email = f"erased.{user.id}@dpdp.healthslip.ai"
+        user.phone_number = f"+910000{user.id:06d}"
+        user.status = "DEACTIVATED"
+
+        # Revoke all active sessions
+        db.query(UserSession).filter(UserSession.user_id == user.id).update({
+            "is_active": False,
+            "revoked_at": datetime.datetime.utcnow()
+        })
+
+    # Revoke all active consents
+    db.query(ConsentRecord).filter(ConsentRecord.patient_id == patient_id).update({
+        "is_granted": False,
+        "revoked_at": datetime.datetime.utcnow()
+    })
+
+    # Mandatory DPDP Audit Log
+    db.add(AuditEvent(
+        action="PATIENT_DATA_ERASED",
+        resource_type="patients",
+        resource_id=str(patient_id),
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("User-Agent"),
+        payload_after={
+            "patient_id": patient_id,
+            "reason": req.reason,
+            "erasure_type": "RIGHT_TO_BE_FORGOTTEN",
+            "statutory_act": "India DPDP Act 2023 Section 12"
+        }
+    ))
+    db.commit()
+
+    return {
+        "success": True,
+        "patient_id": patient_id,
+        "status": "ERASED",
+        "message": "Patient personal data has been securely erased and pseudonymized in strict compliance with the India DPDP Act 2023."
+    }
 

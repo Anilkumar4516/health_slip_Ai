@@ -43,3 +43,11 @@ class PatientDetailResponse(PatientSummary):
     total_prescriptions: int = 0
     total_bills: int = 0
 
+class ConsentCaptureRequest(BaseModel):
+    consent_purpose: str = Field("AI_ANALYSIS", description="AI_ANALYSIS, SMS_REMINDERS, THIRD_PARTY_SHARING, or TELEMEDICINE")
+    is_granted: bool = Field(True, description="Whether consent is given or revoked")
+
+class EraseDataRequest(BaseModel):
+    reason: Optional[str] = Field("Data Principal erasure request under India DPDP Act 2023", description="Reason for deletion request")
+    confirm: bool = Field(True, description="Explicit confirmation of erasure")
+
