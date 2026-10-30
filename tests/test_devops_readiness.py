@@ -70,17 +70,15 @@ def test_production_sqlite_fallback_strictly_prohibited():
 def test_realtime_websocket_heartbeat_and_ping_pong():
     """Verify live real-time WebSocket connection handshake and bidirectional heartbeat PING/PONG"""
     with client.websocket_connect("/ws/live") as ws:
-        # Initial server handshake frame
-        handshake_raw = ws.receive_text()
-        handshake = json.loads(handshake_raw)
+        # Initial server handshake frame (clean JSON parsing)
+        handshake = ws.receive_json()
         assert handshake["event"] == "CONNECTED"
         assert "server_time" in handshake["data"]
         assert handshake["data"]["role"] == "GUEST"
 
         # Client sends real-time heartbeat PING frame
-        ws.send_text(json.dumps({"event": "PING"}))
-        pong_raw = ws.receive_text()
-        pong = json.loads(pong_raw)
+        ws.send_json({"event": "PING"})
+        pong = ws.receive_json()
         assert pong["event"] == "PONG"
         assert "timestamp" in pong
 
@@ -89,8 +87,7 @@ def test_realtime_room_isolation_and_store_broadcast():
     """Verify real-time store-isolated WebSocket connection and live telemetry status"""
     # Connect with a specific pharmacy store room
     with client.websocket_connect("/ws/live?store_id=1") as ws_store:
-        init_raw = ws_store.receive_text()
-        init_data = json.loads(init_raw)
+        init_data = ws_store.receive_json()
         assert init_data["event"] == "CONNECTED"
         assert init_data["data"]["store_id"] == 1
 
