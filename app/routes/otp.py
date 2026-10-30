@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from sqlalchemy.orm import Session
 from typing import Optional, List
+from app.config import settings
 from app.database import get_db
 from app.schemas.otp import OtpRequestSchema, OtpVerifySchema, OtpResponseSchema
 from app.services.otp_service import OtpService
@@ -27,13 +28,17 @@ def request_patient_otp(payload: OtpRequestSchema, request: Request, db: Session
     if not success:
         raise HTTPException(status_code=429, detail=msg)
 
+    # Double safeguard: Never return sandbox OTP in production
+    is_prod = settings.ENVIRONMENT.lower() == "production" or not settings.DEBUG
+    final_sandbox_otp = None if (is_prod or not settings.DEV_OTP_SANDBOX_MODE) else sandbox_otp
+
     return OtpResponseSchema(
         success=True,
         message=msg,
         phone_number=payload.phone_number,
         receipt_number=payload.receipt_number,
         expires_in_seconds=expires_in,
-        sandbox_otp=sandbox_otp
+        sandbox_otp=final_sandbox_otp
     )
 
 @router.post("/verify", response_model=OtpResponseSchema)
