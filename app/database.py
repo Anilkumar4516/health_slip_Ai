@@ -46,6 +46,15 @@ def init_engine():
     except Exception as mysql_err:
         logger.warning(f"[WARN] [Database] MySQL connection failed ({mysql_err}).")
         
+        # Enforce: No SQLite fallback in production mode!
+        if settings.ENVIRONMENT.lower() == "production":
+            error_msg = (
+                f"[PRODUCTION FATAL] MySQL connection failed: {mysql_err}. "
+                f"SQLite fallback is strictly forbidden in production mode."
+            )
+            logger.critical(error_msg)
+            raise RuntimeError(error_msg)
+        
         if settings.FALLBACK_TO_SQLITE:
             logger.info("[INFO] [Database] Falling back to SQLite database for seamless development & testing.")
             engine = create_engine(

@@ -1,13 +1,18 @@
 import os
 import datetime
 import asyncio
+import uuid
+import time
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from app.config import settings
-from app.database import engine, Base, SessionLocal, get_db_status
+from app.database import engine, Base, SessionLocal, get_db_status, ACTIVE_DB_TYPE
+from app.logging_config import setup_logging
 from app.routes import receipts, otp, reminders, verification, stats, auth, pharmacy, realtime, patients
 from app.models.receipt import Receipt
 from app.models.user import Role, User, UserRole, Practitioner, Patient, Pharmacist
@@ -17,6 +22,9 @@ from app.services.receipt_service import ReceiptService
 from app.services.auth_service import AuthService
 from app.services.generic_drug_service import GenericDrugService
 from app.services.websocket_manager import ws_manager
+
+# Initialize structured logging
+logger = setup_logging(level=settings.LOG_LEVEL, environment=settings.ENVIRONMENT)
 
 # Safe create_all (skips existing tables)
 try:
@@ -338,6 +346,34 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Structured Request Logging Middleware
+@app.middleware("http")
+async def structured_logging_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    start_time = time.time()
+    request.state.request_id = request_id
+
+    response = await call_next(request)
+    duration_ms = round((time.time() - start_time) * 1000, 2)
+    response.headers["X-Request-ID"] = request_id
+
+    if not request.url.path.startswith("/static"):
+        client_ip = request.client.host if request.client else "unknown"
+        access_logger = logging.getLogger("healthslip.access")
+        extra_info = {
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": duration_ms,
+            "client_ip": client_ip,
+        }
+        access_logger.info(
+            f"{request.method} {request.url.path} -> {response.status_code} ({duration_ms}ms)",
+            extra={"extra_data": extra_info}
+        )
+    return response
+
 # Production Security Headers Middleware (X-Frame-Options, CSP, HSTS, X-Content-Type)
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
@@ -399,12 +435,41 @@ def health_check():
 @app.get("/api/ready")
 def readiness_probe():
     """Readiness probe for zero-downtime rolling deployments and container health orchestration"""
-    db_status = get_db_status()
-    return {
-        "status": "ready",
-        "database": db_status,
-        "timestamp": datetime.datetime.utcnow().isoformat()
+    checks = {}
+    is_ready = True
+
+    # 1. Database connectivity check
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        checks["database"] = {
+            "status": "ok",
+            "type": ACTIVE_DB_TYPE,
+            "detail": get_db_status().get("detail", "")
+        }
+    except Exception as db_err:
+        is_ready = False
+        checks["database"] = {"status": "error", "detail": str(db_err)}
+
+    # 2. Redis status check
+    if settings.REDIS_ENABLED:
+        if ws_manager.redis:
+            checks["redis"] = {"status": "connected", "host": settings.REDIS_HOST}
+        else:
+            checks["redis"] = {"status": "in_memory_fallback"}
+    else:
+        checks["redis"] = {"status": "disabled (in-memory pubsub)"}
+
+    payload = {
+        "status": "ready" if is_ready else "not_ready",
+        "checks": checks,
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
+
+    if not is_ready:
+        return JSONResponse(status_code=503, content=payload)
+
+    return payload
 
 @app.get("/privacy", response_class=HTMLResponse)
 def serve_privacy_policy():

@@ -1,0 +1,86 @@
+name: HealthSlip AI - Continuous Integration & Test Suite
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Backend Pytest & Schema Verification
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_ci_password_2026
+          MYSQL_DATABASE: healthslip_prod
+          MYSQL_USER: healthslip_ci
+          MYSQL_PASSWORD: healthslip_ci_password_2026
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -u root -proot_ci_password_2026"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run Schema Migrations (Alembic)
+        env:
+          ENVIRONMENT: testing
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: healthslip_ci
+          MYSQL_PASSWORD: healthslip_ci_password_2026
+          MYSQL_DB: healthslip_prod
+          DATABASE_URL: mysql+pymysql://healthslip_ci:healthslip_ci_password_2026@127.0.0.1:3306/healthslip_prod
+          FALLBACK_TO_SQLITE: "False"
+        run: |
+          python -m alembic upgrade head
+
+      - name: Execute Full Pytest Suite
+        env:
+          ENVIRONMENT: testing
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: healthslip_ci
+          MYSQL_PASSWORD: healthslip_ci_password_2026
+          MYSQL_DB: healthslip_prod
+          DATABASE_URL: mysql+pymysql://healthslip_ci:healthslip_ci_password_2026@127.0.0.1:3306/healthslip_prod
+          REDIS_ENABLED: "True"
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+          FALLBACK_TO_SQLITE: "True"
+          SECRET_KEY: ci_cryptographic_hmac_secret_key_32bytes_min_test
+          DEV_OTP_SANDBOX_MODE: "True"
+          SMS_PROVIDER: console
+        run: |
+          pytest
