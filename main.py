@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import engine, Base, SessionLocal, get_db_status
 from app.routes import receipts, otp, reminders, verification, stats, auth, pharmacy, realtime, patients
 from app.models.receipt import Receipt
-from app.models.user import Role, User, UserRole
+from app.models.user import Role, User, UserRole, Practitioner, Patient
 from app.models.pharmacy import PharmacyMedicineStock, DispenseOrder
 from app.schemas.receipt import HealthSlipCreate, ReceiptItemCreate, MedicationReminderCreate, PatientEmbeddedCreate
 from app.services.receipt_service import ReceiptService
@@ -124,7 +124,10 @@ def seed_initial_demo_data():
         admin_role = db.query(Role).filter(Role.code == "ADMIN").first()
 
         # Seed/Update Doctor accounts (both dr.rao and dr.minh supported)
-        for doc_email, doc_phone in [("dr.rao@healthslip.ai", "+919876500001"), ("dr.minh@healthslip.ai", "+15552345678")]:
+        for doc_email, doc_phone, doc_license, doc_name in [
+            ("dr.rao@healthslip.ai", "+919876500001", "TSMC-2024-8841", "Dr. K. S. Rao, M.B.B.S., M.D."),
+            ("dr.minh@healthslip.ai", "+15552345678", "MED-2024-8841", "Dr. Minh Nguyen, M.D.")
+        ]:
             dr = db.query(User).filter((User.email == doc_email) | (User.phone_number == doc_phone)).first()
             if not dr and doctor_role:
                 dr = User(
@@ -140,6 +143,16 @@ def seed_initial_demo_data():
                 db.add(UserRole(user_id=dr.id, role_id=doctor_role.id))
             elif dr and not dr.password_hash.startswith("pbkdf2_sha256$"):
                 dr.password_hash = AuthService.hash_password("Doctor@2026")
+
+            if dr and not dr.practitioner:
+                practitioner = Practitioner(
+                    user_id=dr.id,
+                    license_number=doc_license,
+                    specialization="General & Internal Medicine",
+                    department="Clinical Diagnostics"
+                )
+                db.add(practitioner)
+                db.flush()
 
         # Seed/Update Patient accounts (both rajesh.kumar and minh.patient supported)
         for pt_email, pt_phone in [("rajesh.kumar@example.com", "+919876543210"), ("minh.patient@example.com", "+15550192834")]:
