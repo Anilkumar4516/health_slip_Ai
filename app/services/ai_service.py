@@ -1,7 +1,7 @@
 import re
 import json
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 from app.config import settings
 from app.schemas.ai import AIExtractRequest, AIExtractedResponse
 from app.schemas.receipt import ReceiptItemCreate, MedicationReminderCreate
@@ -14,6 +14,7 @@ KNOWN_MEDICATIONS = {
     "paracetamol": {"type": "Analgesic / Antipyretic", "std_price": 8.0, "default_dose": "650mg", "warning": "Do not exceed 4000mg in 24 hours to protect liver function."},
     "acetaminophen": {"type": "Analgesic", "std_price": 8.0, "default_dose": "500mg", "warning": "Avoid combining with other acetaminophen-containing medications."},
     "amoxicillin": {"type": "Antibiotic (Penicillin)", "std_price": 24.5, "default_dose": "500mg", "warning": "Complete the full course even if symptoms improve; alert doctor if rash develops."},
+    "augmentin": {"type": "Antibiotic (Amoxicillin + Clavulanate)", "std_price": 28.5, "default_dose": "625mg", "warning": "Complete the 5-day course. Take after food with plenty of water."},
     "azithromycin": {"type": "Antibiotic (Macrolide)", "std_price": 28.0, "default_dose": "500mg", "warning": "Take 1 hour before or 2 hours after meals with a full glass of water."},
     "cetirizine": {"type": "Antihistamine", "std_price": 10.0, "default_dose": "10mg", "warning": "May cause mild drowsiness; avoid driving or alcohol."},
     "montelukast": {"type": "Leukotriene receptor antagonist", "std_price": 18.0, "default_dose": "10mg", "warning": "Take in the evening as directed for asthma/allergy prophylaxis."},
@@ -22,7 +23,9 @@ KNOWN_MEDICATIONS = {
     "omeprazole": {"type": "Proton Pump Inhibitor", "std_price": 15.0, "default_dose": "20mg", "warning": "Take 30 to 60 minutes before breakfast on an empty stomach."},
     "pantoprazole": {"type": "Proton Pump Inhibitor", "std_price": 16.0, "default_dose": "40mg", "warning": "Swallow whole with water before meals; do not crush or chew."},
     "doxycycline": {"type": "Tetracycline Antibiotic", "std_price": 19.5, "default_dose": "100mg", "warning": "Drink plenty of fluids; avoid lying down for 30 minutes after taking."},
-    "metisylat": {"type": "Antihistamine / Vasodilator adjuvant", "std_price": 16.0, "default_dose": "1 pill", "warning": "Follow prescribed dosing schedule closely."}
+    "metisylat": {"type": "Antihistamine / Vasodilator adjuvant", "std_price": 16.0, "default_dose": "1 pill", "warning": "Follow prescribed dosing schedule closely."},
+    "crocin": {"type": "Antipyretic (Paracetamol)", "std_price": 5.0, "default_dose": "650mg", "warning": "Take after meals. Maintain 4 to 6 hours between doses."},
+    "pan-d": {"type": "Antacid + Prokinetic", "std_price": 19.0, "default_dose": "1 cap", "warning": "Take early morning on an empty stomach."}
 }
 
 KNOWN_TESTS = {
@@ -43,12 +46,119 @@ KNOWN_TESTS = {
 
 class AIService:
     @staticmethod
+    def scrub_patient_identifiers(text: str) -> str:
+        """
+        De-identify raw clinical text before external transmission (India DPDP Act 2023 / HIPAA Safe Harbor).
+        Strips patient phone numbers, email addresses, names, and postal address markers.
+        """
+        scrubbed = text
+
+        # 1. Scrub mobile & phone numbers (Indian & international formats)
+        scrubbed = re.sub(r'(?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}', '[PHONE_REDACTED]', scrubbed)
+        scrubbed = re.sub(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}', '[PHONE_REDACTED]', scrubbed)
+        scrubbed = re.sub(r'(?i)\bphone\s*[:=]?\s*[\+\d\s\(\)-]{7,18}', 'Phone: [PHONE_REDACTED]', scrubbed)
+
+        # 2. Scrub email addresses
+        scrubbed = re.sub(r'[\w\.-]+@[\w\.-]+\.\w+', '[EMAIL_REDACTED]', scrubbed)
+
+        # 3. Scrub explicit patient name markers: Patient: Rajesh Kumar -> Patient: [PATIENT_REDACTED]
+        scrubbed = re.sub(r'(?i)\b(?:patient(?:\s+name)?|pt|name)\s*[:=]\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*', 'Patient: [PATIENT_REDACTED]', scrubbed)
+        scrubbed = re.sub(r'\b(?:Mr\.|Mrs\.|Ms\.|Shri|Smt\.)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*', '[PATIENT_REDACTED]', scrubbed)
+
+        # 4. Scrub 6-digit Indian PIN codes and address lines
+        scrubbed = re.sub(r'(?i)\b(?:pin|pincode|postal|zip)\s*[:=]?\s*\d{6}\b', '[PINCODE_REDACTED]', scrubbed)
+        scrubbed = re.sub(r'(?i)\b(?:address|residence)\s*[:=]\s*[^,\n]+', 'Address: [ADDRESS_REDACTED]', scrubbed)
+
+        return scrubbed
+
+    @staticmethod
+    def parse_dosage_and_frequency(instruction_text: str) -> Dict[str, Any]:
+        """
+        Parses complex dosage instructions, unit fractions, liquid drops, and clinical frequency abbreviations.
+        Supports:
+        - Fractions: "1/2 tab", "0.5 tablet", "1.5 pills"
+        - Pediatric / Liquid: "5 ml", "10 ml", "5 drops", "2 puffs"
+        - Standard abbreviations: "OD", "BD", "BID", "TDS", "TID", "QID", "SOS", "PRN", "HS", "Stat"
+        """
+        text = instruction_text.strip()
+        text_lower = text.lower()
+
+        # 1. Dosage amount (e.g. 1/2 tab, 0.5 pill, 5ml, 10 drops)
+        dosage = "1 tablet"
+        dose_fraction_match = re.search(r'\b(1/2|1/4|3/4|0\.5|1\.5|2\.5|\d+)\s*(?:tab|tablet|cap|capsule|pill|drop|drops|ml|puffs?)\b', text, re.IGNORECASE)
+        if dose_fraction_match:
+            dosage = dose_fraction_match.group(0).lower()
+        elif re.search(r'\b\d+\s*(?:mg|mcg|gm)\b', text, re.IGNORECASE):
+            str_match = re.search(r'\b\d+\s*(?:mg|mcg|gm)\b', text, re.IGNORECASE)
+            dosage = str_match.group(0)
+
+        # 2. Frequency & Timing
+        frequency = "OD"
+        slots = ["MORNING"]
+        times = ["08:00 am"]
+
+        if re.search(r'\b(tid|tds|thrice\s+daily|3\s+times?)\b', text_lower):
+            frequency = "TID"
+            slots = ["MORNING", "AFTERNOON", "NIGHT"]
+            times = ["08:00 am", "02:00 pm", "09:00 pm"]
+        elif re.search(r'\b(bid|bd|twice\s+daily|2\s+times?)\b', text_lower):
+            frequency = "BID"
+            slots = ["MORNING", "NIGHT"]
+            times = ["08:00 am", "08:00 pm"]
+        elif re.search(r'\b(qid|4\s+times?)\b', text_lower):
+            frequency = "QID"
+            slots = ["MORNING", "AFTERNOON", "EVENING", "NIGHT"]
+            times = ["08:00 am", "01:00 pm", "06:00 pm", "10:00 pm"]
+        elif re.search(r'\b(sos|prn|as\s+needed|when\s+needed)\b', text_lower):
+            frequency = "SOS"
+            slots = ["AFTERNOON"]
+            times = ["When pain or fever occurs"]
+        elif re.search(r'\b(hs|at\s+bedtime|night)\b', text_lower):
+            frequency = "HS"
+            slots = ["NIGHT"]
+            times = ["09:30 pm"]
+        elif "afternoon" in text_lower or "after lunch" in text_lower:
+            frequency = "OD"
+            slots = ["AFTERNOON"]
+            times = ["02:00 pm"]
+
+        # 3. Meal relation
+        meal_relation = "AFTER_MEAL"
+        instructions = "Take after meals with water"
+        if re.search(r'\b(empty\s+stomach|before\s+(?:meals?|food|breakfast|lunch|dinner)|ac)\b', text_lower):
+            meal_relation = "BEFORE_MEAL"
+            instructions = "Take on an empty stomach 30 mins before food"
+        elif re.search(r'\b(with\s+meals?|with\s+food)\b', text_lower):
+            meal_relation = "WITH_MEAL"
+            instructions = "Take along with food or milk"
+
+        # 4. Duration
+        duration_days = 5
+        dur_match = re.search(r'for\s*(\d+)\s*(?:days?|wks?|weeks?)', text_lower)
+        if dur_match:
+            num = int(dur_match.group(1))
+            duration_days = num * 7 if "w" in dur_match.group(0) else num
+
+        return {
+            "dosage": dosage,
+            "frequency": frequency,
+            "slots": slots,
+            "times": times,
+            "meal_relation": meal_relation,
+            "instructions": instructions,
+            "duration_days": duration_days
+        }
+
+    @staticmethod
     def parse_clinical_notes(req: AIExtractRequest) -> AIExtractedResponse:
         """
         Parses clinical notes into structured receipt items, reminders, and clinical safety alerts.
-        Tries Gemini API first if configured; falls back to comprehensive rule-based clinical engine.
+        Marked as DRAFT: Doctor must explicitly review and sign before it can be issued. Never auto-issued.
+        If ENABLE_EXTERNAL_AI is True and GEMINI_API_KEY is present, clinical notes are de-identified
+        (scrubbed of patient identifiers) before sending to Gemini.
+        Otherwise falls back to the clinical heuristic NLP engine.
         """
-        if settings.GEMINI_API_KEY:
+        if settings.ENABLE_EXTERNAL_AI and settings.GEMINI_API_KEY:
             try:
                 return AIService._parse_with_gemini(req)
             except Exception as e:
@@ -58,7 +168,7 @@ class AIService:
 
     @staticmethod
     def _parse_with_gemini(req: AIExtractRequest) -> AIExtractedResponse:
-        """Parse using Google Gemini API"""
+        """Parse using Google Gemini API with de-identified patient clinical text"""
         import httpx
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
         
@@ -98,7 +208,15 @@ class AIService:
         }
         Always include a CONSULTATION line item (₹500 INR standard if unspecified).
         Ensure all medications mentioned have corresponding structured items and dosage reminder schedules.
-        Respond ONLY with valid JSON.
+        Output ONLY the raw JSON object, without markdown quotes or formatting.
+        """
+
+        # Privacy safeguard: Strip all identifying information before sending externally
+        scrubbed_notes = AIService.scrub_patient_identifiers(req.clinical_notes)
+
+        user_content = f"""
+        CLINICAL NOTES (De-identified):
+        {scrubbed_notes}
         """
 
         payload = {
@@ -106,31 +224,31 @@ class AIService:
                 {
                     "role": "user",
                     "parts": [
-                        {"text": f"{system_prompt}\n\nClinical Notes:\n{req.clinical_notes}\nPatient Context: {req.patient_name}, {req.patient_age} yrs, {req.patient_gender}, Phone: {req.patient_phone}"}
+                        {"text": system_prompt + "\n\n" + user_content}
                     ]
                 }
             ],
             "generationConfig": {
-                "response_mime_type": "application/json"
+                "response_mime_type": "application/json",
+                "temperature": 0.1
             }
         }
 
-        with httpx.Client(timeout=15.0) as client:
+        with httpx.Client(timeout=25.0) as client:
             resp = client.post(url, json=payload)
             if resp.status_code == 200:
                 data = resp.json()
                 raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
                 parsed = json.loads(raw_text)
                 
-                # Convert items and reminders to Pydantic models
                 items = [ReceiptItemCreate(**item) for item in parsed.get("items", [])]
                 reminders = [MedicationReminderCreate(**rem) for rem in parsed.get("reminders", [])]
                 
                 return AIExtractedResponse(
-                    patient_name=parsed.get("patient_name") or req.patient_name or "Rajesh Kumar",
-                    patient_age=int(parsed.get("patient_age") or req.patient_age or 28),
-                    patient_gender=parsed.get("patient_gender") or req.patient_gender or "Male",
-                    patient_phone=parsed.get("patient_phone") or req.patient_phone or "+91 98765 43210",
+                    patient_name=req.patient_name or parsed.get("patient_name") or "Rajesh Kumar",
+                    patient_age=int(req.patient_age or parsed.get("patient_age") or 28),
+                    patient_gender=req.patient_gender or parsed.get("patient_gender") or "Male",
+                    patient_phone=req.patient_phone or parsed.get("patient_phone") or "+91 98765 43210",
                     symptoms=parsed.get("symptoms") or "Clinical assessment recorded",
                     diagnosis=parsed.get("diagnosis") or "General Medical Examination",
                     items=items,
@@ -139,7 +257,10 @@ class AIService:
                     safety_warnings=parsed.get("safety_warnings", []),
                     suggested_follow_up_days=int(parsed.get("suggested_follow_up_days") or 7),
                     confidence_score=0.96,
-                    raw_ai_summary="Parsed via Gemini Flash AI Clinical Parser"
+                    raw_ai_summary="Parsed via Gemini Flash AI Clinical Parser (De-identified Safe Transit)",
+                    status="DRAFT",
+                    is_draft=True,
+                    requires_doctor_approval=True
                 )
             else:
                 raise Exception(f"Gemini API returned status {resp.status_code}: {resp.text}")
@@ -182,7 +303,6 @@ class AIService:
                 diagnosis = m.group(1).strip().capitalize()
                 break
         
-        # If no explicit diagnosis keyword, infer from common conditions
         if diagnosis == "General Clinical Consultation":
             conditions = {
                 "migraine": "Acute Migraine & Tension Headache",
@@ -225,9 +345,8 @@ class AIService:
             if med_key in notes_lower:
                 found_meds.append((med_key, med_info))
 
-        # Check for specific mention of Ibuprofen metisylat (from reference UI)
+        # Specific reference match for Ibuprofen metisylat
         if "metisylat" in notes_lower and "ibuprofen" in notes_lower:
-            # Match the exact image context!
             items.append(ReceiptItemCreate(
                 item_type="MEDICATION",
                 item_name="Ibuprofen metisylat",
@@ -250,15 +369,17 @@ class AIService:
         for med_key, med_info in found_meds:
             if med_key == "metisylat":
                 continue
-            # Search for custom dosage or price
-            dose_match = re.search(rf"{med_key}\s*(\d+\s*(?:mg|ml|mcg|pill|tablet))", notes, re.IGNORECASE)
-            dosage = dose_match.group(1) if dose_match else med_info["default_dose"]
-            
-            # Format title e.g. "Ibuprofen"
+
+            # Extract surrounding context for advanced dosage and frequency parsing
+            med_ctx = ""
+            med_pos = notes_lower.find(med_key)
+            if med_pos != -1:
+                med_ctx = notes[med_pos:med_pos + 80]
+
+            parsed_dose = AIService.parse_dosage_and_frequency(med_ctx)
+            dosage = parsed_dose["dosage"] or med_info["default_dose"]
             med_title = med_key.capitalize()
 
-            # Schedule reminders based on timing hints
-            # Image has: Ibuprofen 1 pill at 12:00 am, Ibuprofen 1 pill after lunch, Afternoon
             if med_key == "ibuprofen":
                 items.append(ReceiptItemCreate(
                     item_type="MEDICATION",
@@ -275,7 +396,7 @@ class AIService:
                     timing_slot="MORNING",
                     schedule_time="12:00 am",
                     instructions="Take with a full glass of water",
-                    duration_days=5
+                    duration_days=parsed_dose["duration_days"]
                 ))
                 reminders.append(MedicationReminderCreate(
                     medicine_name=med_title,
@@ -283,7 +404,7 @@ class AIService:
                     timing_slot="AFTERNOON",
                     schedule_time="After lunch",
                     instructions="Take after lunch meal",
-                    duration_days=5
+                    duration_days=parsed_dose["duration_days"]
                 ))
             else:
                 items.append(ReceiptItemCreate(
@@ -293,21 +414,24 @@ class AIService:
                     quantity=1,
                     total_price=med_info["std_price"],
                     dosage=dosage,
-                    instructions=med_info["warning"]
+                    instructions=parsed_dose["instructions"]
                 ))
-                reminders.append(MedicationReminderCreate(
-                    medicine_name=med_title,
-                    dosage=dosage,
-                    timing_slot="MORNING" if "morning" in notes_lower or "od" in notes_lower else "EVENING",
-                    schedule_time="08:00 am" if "morning" in notes_lower or "od" in notes_lower else "08:00 pm",
-                    instructions=med_info["warning"],
-                    duration_days=5
-                ))
+
+                # Create reminders for each timing slot identified
+                for slot, time_str in zip(parsed_dose["slots"], parsed_dose["times"]):
+                    reminders.append(MedicationReminderCreate(
+                        medicine_name=med_title,
+                        dosage=dosage,
+                        timing_slot=slot,
+                        schedule_time=time_str,
+                        instructions=parsed_dose["instructions"],
+                        duration_days=parsed_dose["duration_days"]
+                    ))
 
             if med_info["warning"] not in warnings:
                 warnings.append(f"{med_title}: {med_info['warning']}")
 
-        # If no recognized medications, add a default supportive medication
+        # Default supportive medication if none found
         if not any(item.item_type == "MEDICATION" for item in items):
             items.append(ReceiptItemCreate(
                 item_type="MEDICATION",
@@ -331,7 +455,6 @@ class AIService:
         # Detect Diagnostics / Lab Tests
         for test_key, test_info in KNOWN_TESTS.items():
             if test_key in notes_lower:
-                # Avoid duplicate
                 if not any(test_info["name"] in it.item_name for it in items):
                     items.append(ReceiptItemCreate(
                         item_type="LAB_TEST",
@@ -362,5 +485,8 @@ class AIService:
             safety_warnings=warnings,
             suggested_follow_up_days=follow_up_days,
             confidence_score=0.94,
-            raw_ai_summary="Successfully analyzed clinical notes using HealthSlip Clinical NLP Engine."
+            raw_ai_summary="Successfully analyzed clinical notes using HealthSlip Clinical NLP Engine.",
+            status="DRAFT",
+            is_draft=True,
+            requires_doctor_approval=True
         )

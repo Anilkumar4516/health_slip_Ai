@@ -23,3 +23,7 @@ class AIExtractedResponse(BaseModel):
     suggested_follow_up_days: int
     confidence_score: float
     raw_ai_summary: str
+    status: str = "DRAFT"
+    is_draft: bool = True
+    requires_doctor_approval: bool = True
+    clinical_safety_notice: str = "AI-generated draft prescription. Requires mandatory clinical review and approval by registered medical practitioner."
