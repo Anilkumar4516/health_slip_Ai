@@ -1,10 +1,12 @@
+import csv
+import io
 import datetime
 import hashlib
 import hmac
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from app.config import settings
-from app.models.pharmacy import PharmacyMedicineStock, DispenseOrder
+from app.models.pharmacy import PharmacyMedicineStock, DispenseOrder, StoreInventoryBatch
 from app.models.receipt import Receipt, Bill, Prescription, PrescriptionItem, Medicine
 
 class GenericDrugService:
@@ -308,3 +310,261 @@ class GenericDrugService:
         gen_tag = " [Generic Saved 80%]" if is_generic else ""
         sms = f"HealthSlip {slip_number} for {patient_name.split()[0]}: {meds_str}. Total: ₹{total:.2f}{gen_tag}. Helpln: 1800-HEALTH-AI"
         return sms[:158]
+
+    @classmethod
+    def decrement_stock_fefo(cls, db: Session, medicine_name: str, quantity_to_deduct: int, store_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Auto-decrement stock on dispense using FEFO (First-Expiry-First-Out) logic.
+        Deducts from earliest expiring batch first.
+        """
+        today = datetime.date.today()
+        clean_name = medicine_name.split()[0].strip().lower()
+
+        # Query active batches ordered by earliest expiry date (FEFO)
+        query = db.query(StoreInventoryBatch).filter(
+            (StoreInventoryBatch.brand_name.ilike(f"%{clean_name}%") | StoreInventoryBatch.generic_name.ilike(f"%{clean_name}%")),
+            StoreInventoryBatch.quantity > 0,
+            StoreInventoryBatch.expiry_date >= today
+        )
+        if store_id:
+            query = query.filter(StoreInventoryBatch.store_id == store_id)
+
+        batches = query.order_by(StoreInventoryBatch.expiry_date.asc()).all()
+
+        remaining_needed = quantity_to_deduct
+        batches_deducted = []
+
+        for b in batches:
+            if remaining_needed <= 0:
+                break
+            deduct_qty = min(b.quantity, remaining_needed)
+            b.quantity -= deduct_qty
+            remaining_needed -= deduct_qty
+            batches_deducted.append({
+                "batch_no": b.batch_no,
+                "expiry_date": b.expiry_date.isoformat(),
+                "quantity_deducted": deduct_qty,
+                "remaining_in_batch": b.quantity
+            })
+
+        # Also decrement legacy PharmacyMedicineStock for backward compatibility
+        med_stock = db.query(PharmacyMedicineStock).filter(
+            PharmacyMedicineStock.brand_name.ilike(f"%{clean_name}%")
+        ).first()
+        if med_stock:
+            med_stock.stock_quantity = max(0, med_stock.stock_quantity - quantity_to_deduct)
+
+        db.flush()
+        return {
+            "success": True,
+            "batches_deducted": batches_deducted,
+            "quantity_fulfilled": quantity_to_deduct - remaining_needed,
+            "shortfall": max(0, remaining_needed)
+        }
+
+    @classmethod
+    def get_inventory_alerts(cls, db: Session, store_id: Optional[int] = None) -> Dict[str, Any]:
+        """Fetch low-stock and near-expiry (<90 days) inventory alerts"""
+        today = datetime.date.today()
+        near_expiry_cutoff = today + datetime.timedelta(days=90)
+
+        # 1. Near-expiry batches
+        batch_q = db.query(StoreInventoryBatch).filter(StoreInventoryBatch.quantity > 0)
+        if store_id:
+            batch_q = batch_q.filter(StoreInventoryBatch.store_id == store_id)
+
+        near_expiry = []
+        expired = []
+        for b in batch_q.all():
+            if b.expiry_date < today:
+                expired.append({
+                    "batch_no": b.batch_no,
+                    "brand_name": b.brand_name,
+                    "quantity": b.quantity,
+                    "expiry_date": b.expiry_date.isoformat(),
+                    "days_expired": (today - b.expiry_date).days
+                })
+            elif b.expiry_date <= near_expiry_cutoff:
+                near_expiry.append({
+                    "batch_no": b.batch_no,
+                    "brand_name": b.brand_name,
+                    "quantity": b.quantity,
+                    "expiry_date": b.expiry_date.isoformat(),
+                    "days_remaining": (b.expiry_date - today).days
+                })
+
+        # 2. Low-stock alerts
+        stock_q = db.query(PharmacyMedicineStock)
+        if store_id:
+            stock_q = stock_q.filter(PharmacyMedicineStock.store_id == store_id)
+
+        low_stock = []
+        for s in stock_q.all():
+            if s.stock_quantity <= s.reorder_level:
+                low_stock.append({
+                    "id": s.id,
+                    "brand_name": s.brand_name,
+                    "generic_name": s.generic_name,
+                    "current_stock": s.stock_quantity,
+                    "reorder_level": s.reorder_level,
+                    "status": "OUT_OF_STOCK" if s.stock_quantity == 0 else "LOW_STOCK"
+                })
+
+        return {
+            "store_id": store_id,
+            "low_stock_count": len(low_stock),
+            "near_expiry_count": len(near_expiry),
+            "expired_count": len(expired),
+            "low_stock_items": low_stock,
+            "near_expiry_batches": near_expiry,
+            "expired_batches": expired
+        }
+
+    @classmethod
+    def export_inventory_csv(cls, db: Session, store_id: Optional[int] = None) -> str:
+        """Export inventory batches as CSV for migration and third-party pharmacy POS integration"""
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "store_id", "brand_name", "generic_name", "batch_no",
+            "expiry_date", "quantity", "mrp", "purchase_price",
+            "hsn_code", "gst_rate", "drug_schedule"
+        ])
+
+        batch_q = db.query(StoreInventoryBatch)
+        if store_id:
+            batch_q = batch_q.filter(StoreInventoryBatch.store_id == store_id)
+        batches = batch_q.all()
+
+        if batches:
+            for b in batches:
+                writer.writerow([
+                    b.store_id, b.brand_name, b.generic_name, b.batch_no,
+                    b.expiry_date.isoformat(), b.quantity, b.mrp, b.purchase_price,
+                    b.hsn_code, b.gst_rate, b.drug_schedule
+                ])
+        else:
+            # Fallback to PharmacyMedicineStock records
+            stock_q = db.query(PharmacyMedicineStock)
+            if store_id:
+                stock_q = stock_q.filter(PharmacyMedicineStock.store_id == store_id)
+            for s in stock_q.all():
+                writer.writerow([
+                    s.store_id or (store_id or 1),
+                    s.brand_name,
+                    s.generic_name,
+                    s.batch_number or "B-2026-001",
+                    (datetime.date.today() + datetime.timedelta(days=730)).isoformat(),
+                    s.stock_quantity,
+                    s.unit_price_brand,
+                    s.unit_price_generic,
+                    "3004",
+                    12.0,
+                    s.drug_schedule or "OTC"
+                ])
+
+        return output.getvalue()
+
+    @classmethod
+    def import_inventory_csv(cls, db: Session, csv_content: str, default_store_id: int = 1) -> Dict[str, Any]:
+        """Import batches from CSV, upserting into StoreInventoryBatch and PharmacyMedicineStock"""
+        reader = csv.DictReader(io.StringIO(csv_content.strip()))
+        imported_count = 0
+        errors = []
+
+        for row_idx, row in enumerate(reader, start=1):
+            try:
+                brand = (row.get("brand_name") or "").strip()
+                if not brand:
+                    continue
+                generic = (row.get("generic_name") or brand).strip()
+                batch_no = (row.get("batch_no") or f"BATCH-{row_idx}").strip().upper()
+                exp_str = (row.get("expiry_date") or "").strip()
+                
+                # Parse date
+                try:
+                    if "/" in exp_str:
+                        parts = exp_str.split("/")
+                        if len(parts) == 3:
+                            exp_date = datetime.date(int(parts[2]), int(parts[1]), int(parts[0]))
+                        elif len(parts) == 2:
+                            exp_date = datetime.date(int(parts[1]), int(parts[0]), 28)
+                        else:
+                            exp_date = datetime.date.today() + datetime.timedelta(days=365)
+                    elif "-" in exp_str:
+                        exp_date = datetime.date.fromisoformat(exp_str)
+                    else:
+                        exp_date = datetime.date.today() + datetime.timedelta(days=365)
+                except Exception:
+                    exp_date = datetime.date.today() + datetime.timedelta(days=365)
+
+                qty = int(row.get("quantity") or 0)
+                mrp = float(row.get("mrp") or 0.0)
+                purchase_price = float(row.get("purchase_price") or (mrp * 0.7))
+                hsn = (row.get("hsn_code") or "3004").strip()
+                gst_rate = float(row.get("gst_rate") or 12.0)
+                drug_schedule = (row.get("drug_schedule") or "OTC").strip().upper()
+                target_store_id = int(row.get("store_id") or default_store_id)
+
+                # Upsert StoreInventoryBatch
+                existing_batch = db.query(StoreInventoryBatch).filter(
+                    StoreInventoryBatch.store_id == target_store_id,
+                    StoreInventoryBatch.brand_name == brand,
+                    StoreInventoryBatch.batch_no == batch_no
+                ).first()
+
+                if existing_batch:
+                    existing_batch.quantity = qty
+                    existing_batch.mrp = mrp
+                    existing_batch.purchase_price = purchase_price
+                    existing_batch.expiry_date = exp_date
+                    existing_batch.hsn_code = hsn
+                    existing_batch.gst_rate = gst_rate
+                    existing_batch.drug_schedule = drug_schedule
+                else:
+                    new_batch = StoreInventoryBatch(
+                        store_id=target_store_id,
+                        brand_name=brand,
+                        generic_name=generic,
+                        batch_no=batch_no,
+                        expiry_date=exp_date,
+                        quantity=qty,
+                        mrp=mrp,
+                        purchase_price=purchase_price,
+                        hsn_code=hsn,
+                        gst_rate=gst_rate,
+                        drug_schedule=drug_schedule
+                    )
+                    db.add(new_batch)
+
+                # Also sync into PharmacyMedicineStock
+                stock_rec = db.query(PharmacyMedicineStock).filter(
+                    PharmacyMedicineStock.brand_name == brand
+                ).first()
+                if stock_rec:
+                    stock_rec.stock_quantity = max(stock_rec.stock_quantity, qty)
+                    stock_rec.unit_price_brand = mrp
+                else:
+                    db.add(PharmacyMedicineStock(
+                        store_id=target_store_id,
+                        brand_name=brand,
+                        generic_name=generic,
+                        batch_number=batch_no,
+                        stock_quantity=qty,
+                        reorder_level=20,
+                        unit_price_brand=mrp,
+                        unit_price_generic=round(mrp * 0.25, 2),
+                        savings_percent=75.0,
+                        drug_schedule=drug_schedule
+                    ))
+
+                imported_count += 1
+            except Exception as e:
+                errors.append(f"Row {row_idx}: {str(e)}")
+
+        db.commit()
+        return {
+            "success": True,
+            "batches_imported": imported_count,
+            "errors": errors
+        }

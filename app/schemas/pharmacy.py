@@ -1,11 +1,21 @@
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
+class DispenseLineItem(BaseModel):
+    item_name: str
+    quantity_to_dispense: int = Field(1, ge=1)
+    batch_no: Optional[str] = None
+
 class DispenseRequest(BaseModel):
     slip_number: str = Field(..., description="The unique medical slip number e.g. HSL-2026-94670")
+    store_id: Optional[int] = Field(None, description="ID of the dispensing PharmacyStore")
     store_type: str = Field("URBAN", description="URBAN (high-volume POS) or RURAL (Seva Store / Jan Aushadhi)")
     pharmacist_name: str = Field("Senior Clinical Pharmacist", description="Name of dispensing clinician")
     is_generic_substituted: bool = Field(False, description="Whether Jan Aushadhi low-cost generic salts were substituted")
+    generic_substitution_confirmed: bool = Field(False, description="Pharmacist explicit confirmation for generic substitution")
+    schedule_confirmed: bool = Field(False, description="Pharmacist confirmation for dispensing Schedule H/H1/X drugs")
+    client_sync_id: Optional[str] = Field(None, description="Idempotent client transaction UUID for offline-first sync")
+    line_items: Optional[List[DispenseLineItem]] = Field(None, description="Per-line items to dispense for partial dispensing")
     notes: Optional[str] = Field(None, description="Pharmacist verification or dispensing notes")
 
 class GenericSubstituteRequest(BaseModel):

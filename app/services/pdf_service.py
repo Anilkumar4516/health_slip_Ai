@@ -271,3 +271,257 @@ class PDFService:
         doc.build(elements)
         buffer.seek(0)
         return buffer.getvalue()
+
+    @staticmethod
+    def generate_gst_tax_invoice_pdf(invoice_data: dict) -> bytes:
+        """
+        Generate Indian GST-Compliant Pharmacy Tax Invoice PDF.
+        Includes GSTIN, Drug License numbers (20-B/21-B), HSN Codes, CGST/SGST split,
+        FEFO batch numbers, expiry dates, and Jan Aushadhi generic savings.
+        """
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=36,
+            leftMargin=36,
+            topMargin=36,
+            bottomMargin=36
+        )
+
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'GSTTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            leading=20,
+            textColor=colors.HexColor("#0F172A"),
+            fontName="Helvetica-Bold"
+        )
+        sub_style = ParagraphStyle(
+            'GSTSub',
+            parent=styles['Normal'],
+            fontSize=8,
+            leading=11,
+            textColor=colors.HexColor("#475569")
+        )
+        bold_small = ParagraphStyle(
+            'GSTBoldSmall',
+            parent=styles['Normal'],
+            fontSize=8,
+            leading=11,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A")
+        )
+        table_hdr = ParagraphStyle(
+            'GSTHdr',
+            parent=styles['Normal'],
+            fontSize=8,
+            leading=10,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#FFFFFF")
+        )
+        table_cell = ParagraphStyle(
+            'GSTCell',
+            parent=styles['Normal'],
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#1E293B")
+        )
+
+        elements = []
+
+        store_info = invoice_data.get("store_info", {})
+        patient = invoice_data.get("patient", {})
+        doctor = invoice_data.get("doctor", {})
+        financials = invoice_data.get("financials", {})
+        items = invoice_data.get("items", [])
+        seal = invoice_data.get("cryptographic_seal", "0" * 64)
+
+        # 1. Store Header & Title
+        store_name = store_info.get("name", "HealthSlip Central Pharmacy & Seva Kendra")
+        store_dl = store_info.get("dl_number", "20-B/TS/48912 & 21-B/TS/48913")
+        store_gstin = store_info.get("gstin", "36AAAAA0000A1Z5")
+        store_addr = store_info.get("address", "Hyderabad, Telangana - 500020")
+        store_phone = store_info.get("phone", "+91 98765 00002")
+
+        header_html = f"""
+        <b>{store_name}</b><br/>
+        <font size="8" color="#475569">{store_addr} | Phone: {store_phone}<br/>
+        <b>Drug License No:</b> {store_dl} | <b>GSTIN:</b> {store_gstin}</font>
+        """
+
+        inv_num = invoice_data.get("invoice_number", "INV-2026-001")
+        inv_date = invoice_data.get("date", datetime.datetime.utcnow().strftime("%d %b %Y"))
+        slip_num = invoice_data.get("slip_number", "HSL-2026-00000")
+
+        inv_meta_html = f"""
+        <div align="right">
+        <b><font size="11" color="#0369A1">TAX INVOICE</font></b><br/>
+        <font size="8"><b>Invoice No:</b> {inv_num}<br/>
+        <b>Date:</b> {inv_date}<br/>
+        <b>Rx Slip No:</b> {slip_num}</font>
+        </div>
+        """
+
+        top_table = Table([
+            [Paragraph(header_html, sub_style), Paragraph(inv_meta_html, sub_style)]
+        ], colWidths=[4.2*inch, 3.0*inch])
+        top_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('PADDING', (0, 0), (-1, -1), 0),
+        ]))
+        elements.append(top_table)
+        elements.append(Spacer(1, 8))
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#0284C7"), spaceAfter=8))
+
+        # 2. Patient & Prescribing Doctor Details
+        p_name = patient.get("name", "Rajesh Kumar")
+        p_phone = patient.get("phone", "+91 98765 43210")
+        p_age_gender = f"{patient.get('age', 28)} Y / {patient.get('gender', 'MALE')}"
+
+        d_name = doctor.get("name", "Dr. K. S. Rao, M.B.B.S., M.D.")
+        d_lic = doctor.get("license", "TSMC-2024-8841")
+        d_clinic = doctor.get("clinic", "HealthSlip Clinic")
+
+        info_rows = [
+            [
+                Paragraph("<b>PATIENT DETAILS (Billed To):</b>", bold_small),
+                Paragraph("<b>PRESCRIBING PRACTITIONER:</b>", bold_small)
+            ],
+            [
+                Paragraph(f"Name: <b>{p_name}</b> ({p_age_gender})<br/>Mobile: {p_phone}", sub_style),
+                Paragraph(f"Doctor: <b>{d_name}</b><br/>Reg / License No: {d_lic}<br/>Clinic: {d_clinic}", sub_style)
+            ]
+        ]
+        info_table = Table(info_rows, colWidths=[3.6*inch, 3.6*inch])
+        info_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ('PADDING', (0, 0), (-1, -1), 5),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 10))
+
+        # 3. Itemized GST Medicines Table
+        med_rows = [[
+            Paragraph("S.No", table_hdr),
+            Paragraph("Medicine Description / Salt", table_hdr),
+            Paragraph("HSN", table_hdr),
+            Paragraph("Batch", table_hdr),
+            Paragraph("Exp", table_hdr),
+            Paragraph("Qty", table_hdr),
+            Paragraph("Rate (₹)", table_hdr),
+            Paragraph("GST %", table_hdr),
+            Paragraph("Amount (₹)", table_hdr)
+        ]]
+
+        idx = 1
+        for it in items:
+            name = it.get("item_name") or it.get("medicine_name") or "Medicine"
+            hsn = it.get("hsn_code") or "3004"
+            batch = it.get("batch_no") or it.get("batch_number") or "B-2026-01"
+            exp = it.get("expiry_date") or "12/28"
+            qty = it.get("quantity") or 1
+            rate = float(it.get("unit_price") or it.get("unit_price_generic") or 10.0)
+            gst_pct = float(it.get("gst_rate") or 12.0)
+            amt = float(it.get("total_price") or (rate * qty))
+
+            med_rows.append([
+                Paragraph(str(idx), table_cell),
+                Paragraph(f"<b>{name}</b>", table_cell),
+                Paragraph(hsn, table_cell),
+                Paragraph(batch, table_cell),
+                Paragraph(str(exp), table_cell),
+                Paragraph(str(qty), table_cell),
+                Paragraph(f"{rate:.2f}", table_cell),
+                Paragraph(f"{gst_pct:.1f}%", table_cell),
+                Paragraph(f"{amt:.2f}", table_cell)
+            ])
+            idx += 1
+
+        med_table = Table(
+            med_rows,
+            colWidths=[0.4*inch, 2.3*inch, 0.6*inch, 0.8*inch, 0.6*inch, 0.4*inch, 0.7*inch, 0.6*inch, 0.8*inch]
+        )
+        med_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#0284C7")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+            ('PADDING', (0, 0), (-1, -1), 4),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (5, 0), (-1, -1), 'RIGHT'),
+        ]))
+        elements.append(med_table)
+        elements.append(Spacer(1, 10))
+
+        # 4. GST Tax Split & Financial Summary
+        subtotal = float(financials.get("subtotal", 0.0))
+        tax_amt = float(financials.get("tax_amount", 0.0))
+        cgst_amt = round(tax_amt / 2.0, 2)
+        sgst_amt = round(tax_amt / 2.0, 2)
+        grand_total = float(financials.get("grand_total", subtotal + tax_amt))
+        savings = float(financials.get("jan_aushadhi_savings", 0.0))
+
+        summary_rows = [
+            [
+                Paragraph("<b>Taxable Subtotal:</b>", table_cell),
+                Paragraph(f"₹ {subtotal:.2f}", table_cell)
+            ],
+            [
+                Paragraph("<b>Central GST (CGST @ 6% / 2.5%):</b>", table_cell),
+                Paragraph(f"₹ {cgst_amt:.2f}", table_cell)
+            ],
+            [
+                Paragraph("<b>State GST (SGST @ 6% / 2.5%):</b>", table_cell),
+                Paragraph(f"₹ {sgst_amt:.2f}", table_cell)
+            ],
+            [
+                Paragraph("<b>Total GST Taxes:</b>", table_cell),
+                Paragraph(f"₹ {tax_amt:.2f}", table_cell)
+            ]
+        ]
+        if savings > 0:
+            summary_rows.append([
+                Paragraph("<font color='#059669'><b>Jan Aushadhi Generic Savings:</b></font>", table_cell),
+                Paragraph(f"<font color='#059669'><b>- ₹ {savings:.2f}</b></font>", table_cell)
+            ])
+        summary_rows.append([
+            Paragraph("<b><font size='10' color='#0F172A'>GRAND TOTAL (INR):</font></b>", table_cell),
+            Paragraph(f"<b><font size='10' color='#0F172A'>₹ {grand_total:.2f}</font></b>", table_cell)
+        ])
+
+        sum_table = Table(summary_rows, colWidths=[2.5*inch, 1.2*inch])
+        sum_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+            ('PADDING', (0, 0), (-1, -1), 4),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ]))
+
+        # Place summary on right side
+        empty_col = Table([[Paragraph("", sub_style)]], colWidths=[3.5*inch])
+        fin_wrap = Table([[empty_col, sum_table]], colWidths=[3.5*inch, 3.7*inch])
+        fin_wrap.setStyle(TableStyle([('PADDING', (0, 0), (-1, -1), 0)]))
+        elements.append(fin_wrap)
+        elements.append(Spacer(1, 12))
+
+        # 5. Pharmacist Certification & Cryptographic Verification Seal
+        footer_html = f"""
+        <b>Pharmacist Dispense Declaration:</b> Certified that medications dispensed above strictly comply with Doctor's prescription.
+        Controlled Drug records maintained under Drugs and Cosmetics Rules.<br/>
+        <b>Cryptographic Seal (HMAC-SHA256):</b> <font face="Courier" size="7">{seal}</font><br/>
+        <i>Computer generated GST tax invoice. No signature required.</i>
+        """
+        footer_table = Table([[Paragraph(footer_html, sub_style)]], colWidths=[7.2*inch])
+        footer_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F1F5F9")),
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#94A3B8")),
+            ('PADDING', (0, 0), (-1, -1), 6)
+        ]))
+        elements.append(footer_table)
+
+        doc.build(elements)
+        buffer.seek(0)
+        return buffer.getvalue()

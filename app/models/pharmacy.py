@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, BigInteger, Integer, Float, String, DateTime, Enum, Boolean, Text, ForeignKey
+from sqlalchemy import Column, BigInteger, Integer, Float, String, DateTime, Date, Enum, Boolean, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.mysql import BIGINT as MySQL_BIGINT
 from app.database import Base
@@ -30,6 +30,7 @@ class PharmacyStore(Base):
 
     users = relationship("User", back_populates="store", foreign_keys="User.store_id")
     dispense_orders = relationship("DispenseOrder", back_populates="store")
+    inventory_batches = relationship("StoreInventoryBatch", back_populates="store", cascade="all, delete-orphan")
 
 class PharmacyMedicineStock(Base):
     __tablename__ = "pharmacy_medicine_stock"
@@ -80,4 +81,24 @@ class DispenseOrder(Base):
 
     store = relationship("PharmacyStore", back_populates="dispense_orders")
     pharmacist_user = relationship("User", foreign_keys=[pharmacist_user_id])
+
+class StoreInventoryBatch(Base):
+    __tablename__ = "store_inventory_batches"
+
+    id = BigIntPK()
+    store_id = BigIntFK("pharmacy_stores.id", nullable=False, ondelete="CASCADE")
+    brand_name = Column(String(150), nullable=False, index=True)
+    generic_name = Column(String(150), nullable=False, index=True)
+    batch_no = Column(String(64), nullable=False, index=True)
+    expiry_date = Column(Date, nullable=False)
+    quantity = Column(Integer, nullable=False, default=0)
+    mrp = Column(Float, nullable=False, default=0.0)
+    purchase_price = Column(Float, nullable=False, default=0.0)
+    hsn_code = Column(String(20), default="3004")
+    gst_rate = Column(Float, default=12.0)
+    drug_schedule = Column(String(20), default="OTC") # OTC, SCHEDULE_H, SCHEDULE_H1, SCHEDULE_X
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    store = relationship("PharmacyStore", back_populates="inventory_batches")
 

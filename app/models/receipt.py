@@ -13,6 +13,7 @@ class Medicine(Base):
     dosage_form = Column(Enum('TABLET', 'CAPSULE', 'SYRUP', 'INJECTION', 'OINTMENT', 'DROPS', 'INHALER', 'OTHER', name='med_form_enum'), default='TABLET')
     strength = Column(String(50), nullable=False, default="500mg")
     manufacturer = Column(String(150), nullable=True)
+    drug_schedule = Column(String(20), default="OTC") # OTC, SCHEDULE_H, SCHEDULE_H1, SCHEDULE_X
     is_controlled_substance = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -29,6 +30,8 @@ class Prescription(Base):
     ocr_raw_text = Column(Text, nullable=True)
     prescription_image_url = Column(String(512), nullable=True)
     status = Column(Enum('DRAFT', 'ACTIVE', 'DISPENSED', 'CANCELLED', 'EXPIRED', name='presc_status_enum'), default='ACTIVE')
+    refills_allowed = Column(SmallInteger, default=0, nullable=False)
+    refills_remaining = Column(SmallInteger, default=0, nullable=False)
     issued_date = Column(Date, default=datetime.date.today, nullable=False)
     valid_until = Column(Date, default=lambda: datetime.date.today() + datetime.timedelta(days=30), nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
