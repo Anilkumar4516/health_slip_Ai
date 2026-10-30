@@ -29,9 +29,15 @@ services:
       - OTP_MAX_ATTEMPTS=3
       - OTP_COOLDOWN_SECONDS=60
       - DEV_OTP_SANDBOX_MODE=True
+      - REDIS_ENABLED=True
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://redis:6379/0
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - healthslip_net
@@ -73,9 +79,32 @@ services:
       retries: 5
       start_period: 15s
 
+  # ============================================================================
+  # Redis 7 Pub/Sub & WebSocket Scalable Cluster Bus
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: healthslip_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - healthslip_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
 volumes:
   mysql_data:
     name: healthslip_mysql_data
+  redis_data:
+    name: healthslip_redis_data
 
 networks:
   healthslip_net:

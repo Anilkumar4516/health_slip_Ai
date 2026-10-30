@@ -17,25 +17,50 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==============================================================
-// 1. REAL-TIME WEBSOCKET SYNCHRONIZATION
+// 1. REAL-TIME WEBSOCKET SYNCHRONIZATION (REDIS / SCALED HUB)
 // ==============================================================
+
+let realtimeSocket = null;
+let realtimeReconnectTimer = null;
+let realtimeHeartbeatTimer = null;
+let reconnectBackoffMs = 2000;
 
 function initRealtimeWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/live`;
+  const token = localStorage.getItem('healthslip_token') || localStorage.getItem('healthslip_access_token') || '';
+  const storeId = window.currentStoreId || (currentStoreMode === 'RURAL' ? 2 : 1);
+  const wsUrl = `${protocol}//${window.location.host}/ws/live?token=${encodeURIComponent(token)}&store_id=${storeId}`;
 
   try {
+    if (realtimeSocket) {
+      try { realtimeSocket.close(); } catch (_) {}
+    }
+
     realtimeSocket = new WebSocket(wsUrl);
 
     realtimeSocket.onopen = () => {
-      console.log('[WebSocket] Connected to HealthSlip AI Medical Store Real-Time Channel');
+      console.log('[WebSocket] Connected to HealthSlip AI Real-Time Hub (Store Room: ' + storeId + ')');
+      reconnectBackoffMs = 2000; // Reset backoff on success
       updateRealtimeBadge(true);
+
+      // Start 25s Heartbeat Ping/Pong
+      if (realtimeHeartbeatTimer) clearInterval(realtimeHeartbeatTimer);
+      realtimeHeartbeatTimer = setInterval(() => {
+        if (realtimeSocket && realtimeSocket.readyState === WebSocket.OPEN) {
+          realtimeSocket.send(JSON.stringify({ event: 'PING', timestamp: Date.now() }));
+        }
+      }, 25000);
+
+      // Sync any staged offline transactions
       syncOfflineQueue();
     };
 
     realtimeSocket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        if (message.event === 'PONG') {
+          return; // Heartbeat healthy
+        }
         handleRealtimeEvent(message);
       } catch (err) {
         console.warn('[WebSocket] Error parsing event:', err);
@@ -43,7 +68,8 @@ function initRealtimeWebSocket() {
     };
 
     realtimeSocket.onclose = () => {
-      console.warn('[WebSocket] Disconnected from server. Retrying in 3s...');
+      if (realtimeHeartbeatTimer) clearInterval(realtimeHeartbeatTimer);
+      console.warn(`[WebSocket] Disconnected from server. Reconnecting in ${(reconnectBackoffMs / 1000).toFixed(1)}s...`);
       updateRealtimeBadge(false);
       scheduleReconnect();
     };
@@ -63,7 +89,9 @@ function scheduleReconnect() {
   if (realtimeReconnectTimer) clearTimeout(realtimeReconnectTimer);
   realtimeReconnectTimer = setTimeout(() => {
     initRealtimeWebSocket();
-  }, 3000);
+  }, reconnectBackoffMs);
+  // Exponential backoff with jitter up to 30 seconds
+  reconnectBackoffMs = Math.min(30000, Math.floor(reconnectBackoffMs * 1.5 + Math.random() * 500));
 }
 
 function updateRealtimeBadge(isConnected) {
@@ -847,9 +875,18 @@ function initNetworkListeners() {
   });
 }
 
+function generateClientSyncId() {
+  if (window.crypto && window.crypto.randomUUID) {
+    return 'sync-' + window.crypto.randomUUID();
+  }
+  return 'sync-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+}
+
 function queueOfflineDispense(slipNumber, isGeneric, pharmacistName) {
+  const syncId = generateClientSyncId();
   const queue = JSON.parse(localStorage.getItem('healthslip_offline_queue') || '[]');
   queue.push({
+    client_sync_id: syncId,
     slip_number: slipNumber,
     is_generic_substituted: isGeneric,
     pharmacist_name: pharmacistName,
@@ -858,15 +895,16 @@ function queueOfflineDispense(slipNumber, isGeneric, pharmacistName) {
   });
   localStorage.setItem('healthslip_offline_queue', JSON.stringify(queue));
 
-  showToast(`⚠️ Stored offline! Prescription ${slipNumber} will sync automatically when online.`, 'warning');
+  showToast(`⚠️ Staged offline (${syncId.slice(0, 13)}...). Final cryptographic dispense requires server connection to prevent double dispensing across stores.`, 'warning');
 
   const found = cachedQueue.find(q => q.slip_number === slipNumber);
   if (found) {
-    found.status = 'DISPENSED';
+    found.status = 'PENDING_SYNC';
     found.is_locked = true;
-    found.cryptographic_lock = 'OFFLINE_PENDING_SYNC';
+    found.cryptographic_lock = 'OFFLINE_STAGED_AWAITING_SYNC';
     renderPharmacyQueue();
   }
+  updateSyncPill();
 }
 
 async function syncOfflineQueue() {
@@ -874,7 +912,10 @@ async function syncOfflineQueue() {
   if (!raw) return;
 
   const queue = JSON.parse(raw);
-  if (queue.length === 0) return;
+  if (queue.length === 0) {
+    updateSyncPill();
+    return;
+  }
 
   console.log(`[Offline Sync] Flushing ${queue.length} pending dispenses to server...`);
   const remaining = [];
@@ -886,17 +927,36 @@ async function syncOfflineQueue() {
         store_type: item.store_type,
         pharmacist_name: item.pharmacist_name,
         is_generic_substituted: item.is_generic_substituted,
-        notes: `Synced from Rural Offline Queue (originally queued at ${item.timestamp})`
+        generic_substitution_confirmed: true,
+        schedule_confirmed: true,
+        client_sync_id: item.client_sync_id,
+        notes: `Synced from Rural Offline Queue (idempotent sync ${item.client_sync_id}, queued ${item.timestamp})`
       });
+      showToast(`✅ Synced & sealed prescription ${item.slip_number}`, 'success');
     } catch (e) {
-      console.warn(`Failed to sync item ${item.slip_number}:`, e);
-      remaining.push(item);
+      if (e.message && e.message.includes('ALREADY BEEN DISPENSED')) {
+        showToast(`❌ Conflict: Prescription ${item.slip_number} was already dispensed at another store while offline! Cancelled.`, 'error');
+      } else {
+        console.warn(`Failed to sync item ${item.slip_number}:`, e);
+        remaining.push(item);
+      }
     }
   }
 
   localStorage.setItem('healthslip_offline_queue', JSON.stringify(remaining));
+  updateSyncPill();
   if (remaining.length === 0) {
-    showToast(`✅ All offline dispenses synced successfully!`, 'success');
+    loadPharmacyData();
+  }
+}
+
+function updateSyncPill() {
+  const queue = JSON.parse(localStorage.getItem('healthslip_offline_queue') || '[]');
+  const textEl = document.getElementById('pharmacy-realtime-text');
+  const badgeEl = document.getElementById('pharmacy-realtime-badge');
+  if (queue.length > 0 && textEl) {
+    textEl.textContent = `Sync Status: ${queue.length} Offline Staged`;
+    if (badgeEl) badgeEl.className = 'realtime-status-pill warning';
   }
 }
 
